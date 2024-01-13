@@ -1,40 +1,71 @@
-# Node-TypeScript boilerplate
+# Node.js Rest APIs with Express & MySQL example
 
-Preconfigured boilerplate for building Node.js applications using Express & TypeScript, MySQL with Objection (ORM) and Knex.
+For instruction, please visit:
+> [Build Node.js Rest APIs with Express & MySQL](https://www.bezkoder.com/node-js-rest-api-express-mysql/)
 
-## Goal
+Front-end that works well with this Back-end
+> [Axios Client](https://www.bezkoder.com/axios-request/)
 
-Start building a Node.js server using SQL database and TypeScsipt in seconds 🎉
+> [Angular 8](https://www.bezkoder.com/angular-crud-app/) / [Angular 10](https://www.bezkoder.com/angular-10-crud-app/) / [Angular 11](https://www.bezkoder.com/angular-11-crud-app/) / [Angular 12](https://www.bezkoder.com/angular-12-crud-app/) / [Angular 13](https://www.bezkoder.com/angular-13-crud-example/) / [Angular 14](https://www.bezkoder.com/angular-14-crud-example/) / [Angular 15](https://www.bezkoder.com/angular-15-crud-example/) / [Angular 16 Client](https://www.bezkoder.com/angular-16-crud-example/)
 
-## Usage
+> [Vue 2 Client](https://www.bezkoder.com/vue-js-crud-app/) / [Vue 3 Client](https://www.bezkoder.com/vue-3-crud/) / [Vuetify Client](https://www.bezkoder.com/vuetify-data-table-example/)
 
-Clone the repo, remove `.git` folder (`rm -rf .git`), install dependencies (`yarn install`) and you're ready to go (`yarn start`)
+> [React Client](https://www.bezkoder.com/react-crud-web-api/) / [React Redux Client](https://www.bezkoder.com/react-redux-crud-example/)
 
-## Scripts
+More Practice
+> [Build Node.js Rest APIs with Express, Sequelize & MySQL](https://www.bezkoder.com/node-js-express-sequelize-mysql/)
 
-- `yarn start` - serves the app on `localhost` in watch mode
-- `yarn run build` - builds the project, the out directory is `/dist`
-- `yarn db:migrate` - updates the database with the latest migrations (an alias for `knex migrate:latest`),
-- `yarn db:rb` - rollbacks last migrations (an alias for `knex migrate:rollback`),
-- `yarn db:mc migration_name` - creates a new migration file named `migration_name` (an alias for `knex migrate:make`)
+> [Server side Pagination in Node.js with Sequelize and MySQL](https://www.bezkoder.com/node-js-sequelize-pagination-mysql/)
 
-## Packages 📦
+> [Node.js Express File Upload Rest API example](https://www.bezkoder.com/node-js-express-file-upload/)
 
-- [TypeScript](https://github.com/Microsoft/TypeScript) is here just to get modern ES6 features in Node, like `import/export`
-- [request-promise-native](https://github.com/request/request-promise-native) - use `Promise`s in Node requests
-- [express](https://github.com/expressjs/express) - watch (and interact) whatever you expect in the browesr rather than CLI
-- [nodemon](https://github.com/remy/nodemon) - runs the server in watch mode (i.e. will rebuild each time the code has changed)
+> [Node.js Express File Upload with Google Cloud Storage example](https://www.bezkoder.com/google-cloud-storage-nodejs-upload-file/)
 
-#### Database-related
+> [Node.js: Upload CSV file data into Database with Express](https://www.bezkoder.com/node-js-upload-csv-file-database/)
 
-- [knex](https://github.com/tgriesser/knex) - a query builder for PostgreSQL, MySQL and SQLite3
-- [mysql2](https://github.com/sidorares/node-mysql2) - MySql database client
-- [objection](https://github.com/Vincit/objection.js) - [ORM](https://en.wikipedia.org/wiki/Object-relational_mapping)
+> [Node.js: Upload Excel file data into Database with Express](https://www.bezkoder.com/node-js-upload-excel-file-database/)
 
-## Recommendations (best practices)
+> [Deploying/Hosting Node.js app on Heroku with MySQL database](https://www.bezkoder.com/deploy-node-js-app-heroku-cleardb-mysql/)
 
-- Use [Knex migrations](https://knexjs.org/#Migrations) for creating database schemas
+Security:
+> [Node.js Express: JWT example | Token Based Authentication & Authorization](https://www.bezkoder.com/node-js-jwt-authentication-mysql/)
 
-## License
+Associations:
+> [Sequelize Associations: One-to-Many Relationship example](https://www.bezkoder.com/sequelize-associate-one-to-many/)
 
-MIT
+> [Sequelize Associations: Many-to-Many Relationship example](https://www.bezkoder.com/sequelize-associate-many-to-many/)
+
+Fullstack:
+> [Vue.js + Node.js + Express + MySQL example](https://www.bezkoder.com/vue-js-node-js-express-mysql-crud-example/)
+
+> [Vue.js + Node.js + Express + MongoDB example](https://www.bezkoder.com/vue-node-express-mongodb-mevn-crud/)
+
+> [Angular 8 + Node.js + Express + MySQL example](https://www.bezkoder.com/angular-node-express-mysql/)
+
+> [Angular 10 + Node.js + Express + MySQL example](https://www.bezkoder.com/angular-10-node-js-express-mysql/)
+
+> [Angular 11 + Node.js Express + MySQL example](https://www.bezkoder.com/angular-11-node-js-express-mysql/)
+
+> [Angular 12 + Node.js Express + MySQL example](https://www.bezkoder.com/angular-12-node-js-express-mysql/)
+
+> [Angular 13 + Node.js Express + MySQL example](https://www.bezkoder.com/angular-13-node-js-express-mysql/)
+
+> [Angular 14 + Node.js + Express + MySQL example](https://www.bezkoder.com/angular-14-node-js-express-mysql/)
+
+> [Angular 15 + Node.js + Express + MySQL example](https://www.bezkoder.com/angular-15-node-js-express-mysql/)
+
+> [Angular 16 + Node.js + Express + MySQL example](https://www.bezkoder.com/angular-16-node-js-express-mysql/)
+
+> [React + Node.js + Express + MySQL example](https://www.bezkoder.com/react-node-express-mysql/)
+
+> [React + Redux + Node.js Express + MySQL](https://www.bezkoder.com/react-redux-mysql-crud/)
+
+## Project setup
+```
+npm install
+```
+
+### Run
+```
+node server.js
+```
