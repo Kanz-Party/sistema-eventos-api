@@ -1,0 +1,154 @@
+const Usuario = require("../models/usuario.model.js");
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
+
+exports.login = (req, res) => {
+    const email = req.body.email;
+    const senha = req.body.senha;
+
+    // Buscar usuário pelo email
+    Usuario.findByEmail(email, (err, usuario) => {
+        if (err) {
+            if (err.kind === "not_found") {
+                // Usuário não encontrado
+                return res.status(404).send({
+                    message: "Usuário não encontrado."
+                });
+            } else {
+                // Erro ao buscar o usuário
+                return res.status(500).send({
+                    message: "Erro ao buscar usuário com o email " + email
+                });
+            }
+        }
+
+        // Comparar a senha fornecida com a senha hash no banco de dados
+        bcrypt.compare(senha, usuario.senha, (err, isMatch) => {
+            if (isMatch) {
+                // Login bem-sucedido
+                res.send({ message: "Login bem-sucedido." });
+            } else {
+                // Senha incorreta
+                res.status(401).send({ message: "Senha incorreta." });
+            }
+        });
+    });
+};
+
+
+// Create and Save a new Usuario
+exports.create = (req, res) => {
+  // Validate request
+  if (!req.body) {
+    res.status(400).send({
+      message: "Content can not be empty!"
+    });
+  }
+
+  // Create a Usuario
+  const usuario = new Usuario({
+    nome: req.body.nome,
+    cpf: req.body.cpf,
+    email: req.body.email,
+    telefone: req.body.telefone,
+    senha: req.body.senha
+  });
+
+  // Save Usuario in the database
+  Usuario.create(usuario, (err, data) => {
+    if (err)
+      res.status(500).send({
+        message:
+          err.message || "Some error occurred while creating the Usuario."
+      });
+    else res.send(data);
+  });
+};
+
+// Retrieve all Usuarios from the database.
+exports.findAll = (req, res) => {
+  const nome = req.query.nome;
+
+  Usuario.getAll(nome, (err, data) => {
+    if (err)
+      res.status(500).send({
+        message:
+          err.message || "Some error occurred while retrieving usuarios."
+      });
+    else res.send(data);
+  });
+};
+
+// Find a single Usuario by Id
+exports.findOne = (req, res) => {
+  Usuario.findById(req.params.id, (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({
+          message: `Not found Usuario with id ${req.params.id}.`
+        });
+      } else {
+        res.status(500).send({
+          message: "Error retrieving Usuario with id " + req.params.id
+        });
+      }
+    } else res.send(data);
+  });
+};
+
+// Update a Usuario identified by the id in the request
+exports.update = (req, res) => {
+  // Validate Request
+  if (!req.body) {
+    res.status(400).send({
+      message: "Content can not be empty!"
+    });
+  }
+
+  Usuario.updateById(
+    req.params.id,
+    new Usuario(req.body),
+    (err, data) => {
+      if (err) {
+        if (err.kind === "not_found") {
+          res.status(404).send({
+            message: `Not found Usuario with id ${req.params.id}.`
+          });
+        } else {
+          res.status(500).send({
+            message: "Error updating Usuario with id " + req.params.id
+          });
+        }
+      } else res.send(data);
+    }
+  );
+};
+
+// Delete a Usuario with the specified id in the request
+exports.delete = (req, res) => {
+  Usuario.remove(req.params.id, (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({
+          message: `Not found Usuario with id ${req.params.id}.`
+        });
+      } else {
+        res.status(500).send({
+          message: "Could not delete Usuario with id " + req.params.id
+        });
+      }
+    } else res.send({ message: `Usuario was deleted successfully!` });
+  });
+};
+
+// Delete all Usuarios from the database.
+exports.deleteAll = (req, res) => {
+  Usuario.removeAll((err, data) => {
+    if (err)
+      res.status(500).send({
+        message:
+          err.message || "Some error occurred while removing all usuarios."
+      });
+    else res.send({ message: `All Usuarios were deleted successfully!` });
+  });
+};

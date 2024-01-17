@@ -5,7 +5,7 @@ const cors = require("cors");
 const app = express();
 
 var corsOptions = {
-  origin: "http://localhost:8081"
+  origin: "*"
 };
 
 app.use(cors(corsOptions));
@@ -18,10 +18,11 @@ app.use(express.urlencoded({ extended: true })); /* bodyParser.urlencoded() is d
 
 // simple route
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to bezkoder application." });
+  res.json({ message: "APP is running" });
 });
 
-require("./app/routes/tutorial.routes.js")(app);
+require("./app/routes/empresa.routes.js")(app);
+require("./app/routes/usuario.routes.js")(app);
 
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
