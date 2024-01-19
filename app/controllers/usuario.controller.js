@@ -2,38 +2,6 @@ const Usuario = require("../models/usuario.model.js");
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
-exports.login = (req, res) => {
-    const email = req.body.email;
-    const senha = req.body.senha;
-
-    // Buscar usuário pelo email
-    Usuario.findByEmail(email, (err, usuario) => {
-        if (err) {
-            if (err.kind === "not_found") {
-                // Usuário não encontrado
-                return res.status(404).send({
-                    message: "Usuário não encontrado."
-                });
-            } else {
-                // Erro ao buscar o usuário
-                return res.status(500).send({
-                    message: "Erro ao buscar usuário com o email " + email
-                });
-            }
-        }
-
-        // Comparar a senha fornecida com a senha hash no banco de dados
-        bcrypt.compare(senha, usuario.senha, (err, isMatch) => {
-            if (isMatch) {
-                // Login bem-sucedido
-                res.send({ message: "Login bem-sucedido." });
-            } else {
-                // Senha incorreta
-                res.status(401).send({ message: "Senha incorreta." });
-            }
-        });
-    });
-};
 
 
 // Create and Save a new Usuario
@@ -56,10 +24,11 @@ exports.create = (req, res) => {
 
   // Save Usuario in the database
   Usuario.create(usuario, (err, data) => {
+    console.log(err);
     if (err)
       res.status(500).send({
         message:
-          err.message || "Some error occurred while creating the Usuario."
+          err.message || "Usuário já cadastrado."
       });
     else res.send(data);
   });
