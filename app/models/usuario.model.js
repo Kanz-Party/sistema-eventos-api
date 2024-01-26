@@ -3,21 +3,21 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10; // Você pode ajustar isso conforme necessário
 
 const Usuario = function (usuario) {
-    this.nome = usuario.nome;
-    this.cpf = usuario.cpf;
-    this.email = usuario.email;
-    this.telefone = usuario.telefone;
+    this.usuario_nome = usuario.nome;
+    this.usuario_cpf = usuario.cpf;
+    this.usuario_email = usuario.email;
+    this.usuario_telefone = usuario.telefone;
     if (usuario.senha) {
-        this.senha = bcrypt.hashSync(usuario.senha, saltRounds); // Criptografando a senha
+        this.usuario_senha = bcrypt.hashSync(usuario.senha, saltRounds); // Criptografando a senha
     } else {
-        this.senha = null;
+        this.usuario_senha = null;
     }
     // ...
 };
 
 Usuario.create = (newUsuario, result) => {
     // Primeiro, verifica se já existe um usuário com o mesmo e-mail
-    sql.query("SELECT * FROM usuarios WHERE email = ?", [newUsuario.email], (err, res) => {
+    sql.query("SELECT * FROM usuarios WHERE usuario_email = ?", [newUsuario.usuario_email], (err, res) => {
         if (err) {
             console.log("error: ", err);
             result(err, null);
@@ -31,7 +31,7 @@ Usuario.create = (newUsuario, result) => {
         }
 
         // Depois, verifica se já existe um usuário com o mesmo CPF
-        sql.query("SELECT * FROM usuarios WHERE cpf = ?", [newUsuario.cpf], (err, res) => {
+        sql.query("SELECT * FROM usuarios WHERE usuario_cpf = ?", [newUsuario.usuario_cpf], (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 result(err, null);
@@ -61,7 +61,7 @@ Usuario.create = (newUsuario, result) => {
 
 
 Usuario.findById = (id, result) => {
-    sql.query(`SELECT * FROM usuarios WHERE id = ${id}`, (err, res) => {
+    sql.query(`SELECT * FROM usuarios WHERE usuario_id = ${id}`, (err, res) => {
         if (err) {
             console.log("error: ", err);
             result(err, null);
@@ -83,7 +83,7 @@ Usuario.getAll = (nome, result) => {
     let query = "SELECT * FROM usuarios";
 
     if (nome) {
-        query += ` WHERE nome LIKE '%${nome}%'`;
+        query += ` WHERE usuario_nome LIKE '%${nome}%'`;
     }
 
     sql.query(query, (err, res) => {
@@ -100,7 +100,7 @@ Usuario.getAll = (nome, result) => {
 
 Usuario.updateById = (id, usuario, result) => {
     sql.query(
-        "UPDATE usuarios SET nome = ?, cpf = ?, email = ?, telefone = ?, senha = ? WHERE id = ?",
+        "UPDATE usuarios SET usuario_nome = ?, usuario_cpf = ?, usuario_email = ?, usuario_telefone = ?, usuario_senha = ? WHERE usuario_id = ?",
         [usuario.nome, usuario.cpf, usuario.email, usuario.telefone, usuario.senha, id],
         (err, res) => {
             if (err) {
@@ -122,7 +122,7 @@ Usuario.updateById = (id, usuario, result) => {
 };
 
 Usuario.remove = (id, result) => {
-    sql.query("DELETE FROM usuarios WHERE id = ?", id, (err, res) => {
+    sql.query("DELETE FROM usuarios WHERE usuario_id = ?", id, (err, res) => {
         if (err) {
             console.log("error: ", err);
             result(null, err);
@@ -154,7 +154,7 @@ Usuario.removeAll = result => {
 };
 
 Usuario.findByEmail = (email, result) => {
-    sql.query(`SELECT * FROM usuarios WHERE email = '${email}'`, (err, res) => {
+    sql.query(`SELECT * FROM usuarios WHERE usuario_email = '${email}'`, (err, res) => {
         if (err) {
             console.log("error: ", err);
             result(err, null);

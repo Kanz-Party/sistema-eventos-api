@@ -3,7 +3,8 @@ const cors = require("cors");
 const session = require("express-session");
 const crypto = require('crypto');
 const chaveSecreta = crypto.randomBytes(32).toString('hex');
-
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const app = express();
 
@@ -28,12 +29,25 @@ app.use(session({
 
 // Middleware de controle de sessão
 const verificaAutenticacao = (req, res, next) => {
-  if (req.session && req.session.usuario) {
-    // O usuário está autenticado, permitir o acesso
-    next();
+  // Obter o token do cabeçalho Authorization
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1]; // Bearer <token>
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, usuario) => {
+      if (err) {
+        // Token inválido ou expirado
+        return res.status(403).json({ message: "Token inválido ou expirado." });
+      }
+
+      // Token válido, anexar usuário ao objeto req e passar para o próximo middleware
+      req.usuario = usuario;
+      next();
+    });
   } else {
-    // O usuário não está autenticado, redirecionar para página de login ou retornar erro
-    res.status(401).json({ message: "Você não está autenticado." });
+    // Sem token no cabeçalho
+    res.status(401).json({ message: "Token não fornecido. Você não está autenticado." });
   }
 };
 
