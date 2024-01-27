@@ -25,7 +25,7 @@ Carrinho.create = async (newCarrinho, result) => {
         for (const carrinhoLote of carrinho_lotes) {
             const dataAtual = moment().format('YYYY-MM-DD HH:mm:ss');
             const lote_db = lotes_db.find(l => l.lote_id === carrinhoLote.lote_id);
-            
+
             if (!lote_db || lote_db.lote_quantidade < carrinhoLote.lote_quantidade) {
                 throw new Error(`QUANTIDADE_INVALIDA: ${carrinhoLote.lote_id}`);
             }
@@ -42,7 +42,7 @@ Carrinho.create = async (newCarrinho, result) => {
             await updateLoteQuantidade(carrinhoLote);
         }
 
-        result(null, { carrinho_id: carrinho_id });
+        result(null, { carrinho_id: carrinho_id, carrinho_hash: newCarrinho.carrinho_hash});
     } catch (err) {
         console.error("error: ", err);
         result(err, null);
