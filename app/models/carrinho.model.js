@@ -86,7 +86,7 @@ Carrinho.create = async (newCarrinho, result) => {
             await updateLoteQuantidade(carrinho_lote);
         }
 
-        result(null, { carrinho_id: carrinho_id });
+        result(null, { carrinho_id: carrinho_id, carrinho_hash: newCarrinho.carrinho_hash});
     } catch (err) {
         console.error("error: ", err);
         result(err, null);
