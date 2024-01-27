@@ -57,6 +57,7 @@ app.post("/login", (req, res) => {
 });
 
 require("./app/routes/ingresso.routes.js")(app);
+require("./app/routes/carrinho.routes.js")(app);
 // Rotas protegidas que exigem autenticação
 app.use(verificaAutenticacao);
 require("./app/routes/empresa.routes.js")(app);
