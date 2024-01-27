@@ -25,9 +25,13 @@ Carrinho.create = async (newCarrinho, result) => {
         for (const carrinhoLote of carrinho_lotes) {
             const dataAtual = moment().format('YYYY-MM-DD HH:mm:ss');
             const lote_db = lotes_db.find(l => l.lote_id === carrinhoLote.lote_id);
-
+            
             if (!lote_db || lote_db.lote_quantidade < carrinhoLote.lote_quantidade) {
                 throw new Error(`QUANTIDADE_INVALIDA: ${carrinhoLote.lote_id}`);
+            }
+
+            if (lote_db.lote_quantidade_maxima < carrinhoLote.lote_quantidade) {
+                throw new Error(`QUANTIDADE_MAXIMA_ULTRAPASSADA: ${carrinhoLote.lote_id}`);
             }
 
             if (lote_db.lote_data_inicio_venda > dataAtual || lote_db.lote_data_fim_venda < dataAtual) {
