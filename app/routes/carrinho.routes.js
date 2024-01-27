@@ -5,6 +5,8 @@ module.exports = app => {
   
     // Create a new carrinho
     router.post("/", carrinho.create);
+
+    router.get("/:carrinho_hash", carrinho.findByHash)
   
     app.use('/api/carrinhos', router);
   };

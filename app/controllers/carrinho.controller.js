@@ -18,3 +18,14 @@ exports.create = (req, res) => {
         else res.send(data);
     });
 };
+
+exports.findByHash = (req, res) => {
+    Carrinho.findByHash(req.params.carrinho_hash, (err, data) => {
+        if (err)
+            res.status(500).send({
+                err: err.err || "ERRO_INTERNO",
+                message: err.message || "Ocorreu um erro ao criar o carrinho."
+        }); 
+        else res.send(data);
+    });
+};
