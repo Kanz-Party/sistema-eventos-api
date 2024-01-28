@@ -3,7 +3,6 @@ const moment = require('moment');
 const crypto = require('crypto');
 
 const carrinho_tempo_expiracao = 15 * 60 * 1000; // 15 minutos
-const intervalo_checar_status = 5 * 60 * 1000; // 5 minutos
 
 // Constructor
 const Carrinho = function (carrinho) {
@@ -14,14 +13,21 @@ const Carrinho = function (carrinho) {
 };
 
 Carrinho.findByHash = async (carrinho_hash, result) => {
+
     try {
         const carrinho = await getCarrinhoByHash(carrinho_hash);
 
         if (!carrinho) {
-            throw new Error(`CARRINHO_NAO_ENCONTRADO: ${carrinho_hash}`);
+            result({
+                err: 'CARRINHO_NAO_ENCONTRADO',
+                message: `Carrinho com hash ${carrinho_hash} não encontrado`
+            })
         }
         if(moment(carrinho.carrinho_expiracao).isBefore(moment())) {
-            throw new Error(`CARRINHO_EXPIRADO: ${carrinho_hash}`);
+            result({
+                err: 'CARRINHO_EXPIRADO',
+                message: `Carrinho com hash ${carrinho_hash} expirado`
+            })
         };
 
         const carrinhoLotes = await getCarrinhoLotes(carrinho.carrinho_id);
@@ -58,48 +64,53 @@ Carrinho.create = async (newCarrinho, result) => {
         
         newCarrinho.carrinho_expiracao = moment().add(carrinho_tempo_expiracao, 'ms').format('YYYY-MM-DD HH:mm:ss');
         newCarrinho.carrinho_hash = crypto.randomBytes(20).toString('hex');
-
-        const carrinho_id = await insertCarrinho(newCarrinho);
-
-        // apagar carrinho após 15 minutos
-        setTimeout(() => apagarCarinho(carrinho_id), carrinho_tempo_expiracao)
-
+        
         const lotes_db = await getLotesDb(carrinho_lotes);
 
+        let carrinhos_lotes_insert = [];
         for (const carrinho_lote of carrinho_lotes) {
             const data_atual = moment().format('YYYY-MM-DD HH:mm:ss');
             const lote_db = lotes_db.find(l => l.lote_id === carrinho_lote.lote_id);
             
             if (!lote_db || lote_db.lote_quantidade < carrinho_lote.lote_quantidade) {
-                throw new Error(`QUANTIDADE_INVALIDA: ${carrinho_lote.lote_id}`);
+                result({
+                    err: 'QUANTIDADE_INDISPONIVEL',
+                    message: `Quantidade indisponível para o lote ${carrinho_lote.lote_id}`
+                })
+                return;
             }
 
             if (lote_db.lote_quantidade_maxima < carrinho_lote.lote_quantidade) {
-                throw new Error(`QUANTIDADE_MAXIMA_ULTRAPASSADA: ${carrinho_lote.lote_id}`);
+                result({
+                    err: 'QUANTIDADE_MAXIMA_EXCEDIDA',
+                    message: `Quantidade máxima excedida para o lote ${carrinho_lote.lote_id}`
+                })
+                return;
             }
 
             if (lote_db.lote_data_inicio_venda > data_atual || lote_db.lote_data_fim_venda < data_atual) {
-                throw new Error(`DATA_INVALIDA: ${carrinho_lote.lote_id}`);
+                result({
+                    err: 'LOTE_FORA_DA_VENDA',
+                    message: `Lote ${carrinho_lote.lote_id} fora da venda`
+                })
+                return;
             }
-
-            await insertCarrinhoLotes(carrinho_id, carrinho_lote, lote_db.lote_preco);
-            await updateLoteQuantidade(carrinho_lote);
+            
+            carrinhos_lotes_insert.push({
+                lote_id: carrinho_lote.lote_id,
+                lote_preco: lote_db.lote_preco,
+                lote_quantidade: carrinho_lote.lote_quantidade
+            });
         }
+        
+        const carrinho_id = await insertCarrinho(newCarrinho);
+        await insertCarrinhoLotes(carrinho_id, carrinhos_lotes_insert);
 
         result(null, { carrinho_id: carrinho_id, carrinho_hash: newCarrinho.carrinho_hash});
     } catch (err) {
         console.error("error: ", err);
         result(err, null);
     }
-};
-
-const apagarCarinho = (carrinho_id) => {
-    return new Promise((resolve, reject) => {
-        sql.query("UPDATE carrinhos SET carrinho_ativo = 0 WHERE carrinho_id = ?", [carrinho_id], (err, res) => {
-            if (err) return reject(err);
-            resolve(res);
-        });
-    });
 };
 
 const insertCarrinho = (carrinho) => {
@@ -120,26 +131,27 @@ const getLotesDb = (carrinho_lotes) => {
     });
 };
 
-const insertCarrinhoLotes = (carrinho_id, carrinho_lote, lote_preco) => {
+const insertCarrinhoLotes = (carrinho_id, carrinhos_lotes_insert) => {
     return new Promise((resolve, reject) => {
-        sql.query("INSERT INTO carrinhos_lotes SET ?", {
-            carrinho_id: carrinho_id,
-            lote_id: carrinho_lote.lote_id,
-            lote_preco: lote_preco,
-            lote_quantidade: carrinho_lote.lote_quantidade
-        }, (err, res) => {
-            if (err) return reject(err);
-            resolve(res);
-        });
-    });
-};
+        const data = carrinhos_lotes_insert.map(carrinho_lote => [
+            carrinho_id,
+            carrinho_lote.lote_id,
+            carrinho_lote.lote_preco,
+            carrinho_lote.lote_quantidade
+        ]);
 
-const updateLoteQuantidade = (carrinho_lote) => {
-    return new Promise((resolve, reject) => {
-        sql.query("UPDATE lotes SET lote_quantidade = lote_quantidade - ? WHERE lote_id = ?", [carrinho_lote.lote_quantidade, carrinho_lote.lote_id], (err, res) => {
+        sql.query("INSERT INTO carrinhos_lotes (carrinho_id, lote_id, lote_preco, lote_quantidade) VALUES ?", [data], (err, res) => {
             if (err) return reject(err);
             resolve(res);
         });
+
+        const updates = carrinhos_lotes_insert.map(carrinho_lote => 
+            sql.query("UPDATE lotes SET lote_quantidade = lote_quantidade - ? WHERE lote_id = ?", [carrinho_lote.lote_quantidade, carrinho_lote.lote_id])
+        );
+
+        Promise.all(updates)
+            .then(() => resolve())
+            .catch(err => reject(err));
     });
 };
 
