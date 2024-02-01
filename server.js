@@ -56,6 +56,7 @@ app.post("/login", (req, res) => {
   require("./app/models/login.js").login(req, res);
 });
 
+require("./app/routes/mercadoPago.routes.js")(app);
 require("./app/routes/ingresso.routes.js")(app);
 require("./app/routes/carrinho.routes.js")(app);
 // Rotas protegidas que exigem autenticação

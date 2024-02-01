@@ -402,10 +402,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cookie@npm:0.4.2":
-  version: 0.4.2
-  resolution: "cookie@npm:0.4.2"
-  checksum: e2b0be16f59835785be50f5dfe076c26e81ab49c988a6290144444d0dfdf8192e82b0aa1857734b292567795e7af3f2c951d82e5036a2aacb15cd4a6681b5d49
+"cookie-signature@npm:1.0.7":
+  version: 1.0.7
+  resolution: "cookie-signature@npm:1.0.7"
+  checksum: 531210e0fec3a7f0bc7c0740e5aa58c4dee51e092f2e505d62c36ee9ddb20e216322e91da20cb2bad04e67489feb94c715ca797715da6353ab1d2e71f25d76ae
   languageName: node
   linkType: hard
 
@@ -413,6 +413,13 @@ __metadata:
   version: 0.5.0
   resolution: "cookie@npm:0.5.0"
   checksum: 23bd6dd64f025869373c6f3c72a870b9bd0e0e6a0ffe734229c032d7aca51972ba584b39100c09141b18043e790862425aae4a60d7449fca565b21cdae0cb3c3
+  languageName: node
+  linkType: hard
+
+"cookie@npm:0.6.0":
+  version: 0.6.0
+  resolution: "cookie@npm:0.6.0"
+  checksum: 012989bdcd82c692503540716b9ccc4fc43e6594e7ae53710467a4fbb34f998d375131ba95b875414cc660770bfc65a630df3303a8c431af6b7eb81548b0e840
   languageName: node
   linkType: hard
 
@@ -600,18 +607,18 @@ __metadata:
   linkType: hard
 
 "express-session@npm:^1.17.3":
-  version: 1.17.3
-  resolution: "express-session@npm:1.17.3"
+  version: 1.18.0
+  resolution: "express-session@npm:1.18.0"
   dependencies:
-    cookie: "npm:0.4.2"
-    cookie-signature: "npm:1.0.6"
+    cookie: "npm:0.6.0"
+    cookie-signature: "npm:1.0.7"
     debug: "npm:2.6.9"
     depd: "npm:~2.0.0"
     on-headers: "npm:~1.0.2"
     parseurl: "npm:~1.3.3"
     safe-buffer: "npm:5.2.1"
     uid-safe: "npm:~2.1.5"
-  checksum: 2c8276f2421c695d7498e81bb82092e6bd488e9178c6e5f7704841617898e0103f31a8f1d48eab6e55516781ffb085046c8b7e4fcac27fdb4aecc6edb7107447
+  checksum: 5d542e415f738dc05a38809671eb0302dc507c077473aa16dcbcb4ff4c60b4bfdc481eced24265cea36a7b234a5b5ff3c706a7837e387a9840d9ad280e75e5f1
   languageName: node
   linkType: hard
 
@@ -1221,6 +1228,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mercadopago@npm:^2.0.6":
+  version: 2.0.6
+  resolution: "mercadopago@npm:2.0.6"
+  dependencies:
+    node-fetch: "npm:^2.6.12"
+    uuid: "npm:^9.0.0"
+  checksum: 6727ec0f1d9fc3f64e4e9a4427f3acc072cd5ac15fda4eff3461dfb2bf1cfcc92e86eefe17b1b58f72db816fafe5640d286294073aa5b83a140fe5b613a0609b
+  languageName: node
+  linkType: hard
+
 "merge-descriptors@npm:1.0.1":
   version: 1.0.1
   resolution: "merge-descriptors@npm:1.0.1"
@@ -1434,7 +1451,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-fetch@npm:^2.6.7":
+"node-fetch@npm:^2.6.12, node-fetch@npm:^2.6.7":
   version: 2.7.0
   resolution: "node-fetch@npm:2.7.0"
   dependencies:
@@ -1478,6 +1495,7 @@ __metadata:
     express: "npm:^4.18.1"
     express-session: "npm:^1.17.3"
     jsonwebtoken: "npm:^9.0.2"
+    mercadopago: "npm:^2.0.6"
     moment: "npm:^2.30.1"
     momentjs: "npm:^2.0.0"
     mysql: "npm:^2.18.1"
@@ -1779,14 +1797,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"safe-buffer@npm:5.1.2, safe-buffer@npm:^5.0.1, safe-buffer@npm:~5.1.0, safe-buffer@npm:~5.1.1":
+"safe-buffer@npm:5.1.2, safe-buffer@npm:~5.1.0, safe-buffer@npm:~5.1.1":
   version: 5.1.2
   resolution: "safe-buffer@npm:5.1.2"
   checksum: 86939c6de6b62c1d39b7da860a56d5e50ede9b0ab35a91b0620bff8a96f1f798084ff910059f605087c2c500dc23dfdf77ff5bc3bcc8d4d38e3d634de2e3e426
   languageName: node
   linkType: hard
 
-"safe-buffer@npm:5.2.1":
+"safe-buffer@npm:5.2.1, safe-buffer@npm:^5.0.1":
   version: 5.2.1
   resolution: "safe-buffer@npm:5.2.1"
   checksum: da8a21b3336a21c152eb3ba8ab41acde5772644f026d4b6e5f9fd8afa4f0cf407c113b19a362580fab9aea8beea295465432fc7684f9ff38aac559bb1b5528cd
@@ -2148,6 +2166,15 @@ __metadata:
   version: 1.0.1
   resolution: "utils-merge@npm:1.0.1"
   checksum: b72b8d7a0f7d63a9b1ced39a44b292994111c93cf9c4da8a561e4fe0d0232af7217a53d5aae3a950fb7ab6f423baf3e0d2d7c7c33dd6c4ec78d0a3c720ee6adb
+  languageName: node
+  linkType: hard
+
+"uuid@npm:^9.0.0":
+  version: 9.0.1
+  resolution: "uuid@npm:9.0.1"
+  bin:
+    uuid: dist/bin/uuid
+  checksum: 1e8544639b27fbae6a51b4b64d1b2c707c91abb70e3c478819e9dbe3982cbf246bbc749196ce1440d1d0fcc10811d27a2c3127f64b570d168dc7a2e664bf36b9
   languageName: node
   linkType: hard
 
