@@ -10,6 +10,7 @@ const MercadoPago = function(mercadoPago) {
 function getIngressos(carrinho_id) {
     return new Promise((resolve, reject) => {
         sql.query(`SELECT
+            carrinho_id,
             ingresso_id,
             ingresso_descricao,
             lote_id,
@@ -60,6 +61,36 @@ function getUsuario(usuario_id) {
     });
 }
 
+function insertPagamento(pagamento) {
+    return new Promise((resolve, reject) => {
+        sql.query("INSERT INTO pagamentos SET ?", pagamento, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            resolve({ pagamento_id: res.insertId, ...pagamento });
+        });
+    });
+}
+
+function getPagamentoByCarrinhoAndUsuario(carrinho_id, usuario_id) {
+    return new Promise((resolve, reject) => {
+        sql.query(`SELECT * FROM pagamentos WHERE carrinho_id = ${carrinho_id} AND usuario_id = ${usuario_id}`, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            if (res.length) {
+                resolve(res[0]);
+                return;
+            }
+            resolve(false);
+        });
+    });
+}
+
 MercadoPago.createPayment = async (body, result) => {
     const client = new MercadoPagoConfig({ accessToken: 'TEST-4998860730644430-011016-e8e9bec7933d9faa9557b7e19702140a-511688906' });
     const dateFrom = moment();
@@ -67,6 +98,18 @@ MercadoPago.createPayment = async (body, result) => {
 
     const ingressos = await getIngressos(body.carrinho_id);
     const usuario = await getUsuario(body.usuario_id);
+
+    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
+    if(pagamentoExistente) {
+        result(null, {
+            pagamento: {
+                pagamento_id: pagamentoExistente.pagamento_id,
+                pagamento_expiracao: moment(pagamentoExistente.pagamento_expiracao).format('YYYY-MM-DD HH:mm:ss'),
+                pagamento_checkout_url: pagamentoExistente.pagamento_checkout_url
+            }
+        });
+        return;
+    }
 
     const preference = new Preference(client);
         preference.create({body: {
@@ -126,11 +169,36 @@ MercadoPago.createPayment = async (body, result) => {
         },
         // notification_url: 'https://www.your-site.com/ipn',
         // external_reference: '',
-        statement_descriptor: 'Raqsa Party',
+        statement_descriptor: 'Kanz Party',
         expires: true,
         expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
         expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-    }}).then(response => result(null, response))
+    }}).then(async response => {
+        console.log(response)
+        const pagamento = {
+            carrinho_id: body.carrinho_id,
+            usuario_id: body.usuario_id,
+            pagamento_status: 0,
+            pagamento_checkout_url: response.init_point,   
+            pagamento_preference_id: response.id,
+            pagamento_expiracao: expirationDate.format('YYYY-MM-DD HH:mm:ss')
+        }
+        const pagamentoResponse = await insertPagamento(pagamento);
+        if(!pagamentoResponse.pagamento_id) {
+            result({ kind: "not_found" }, null);
+        } else {
+            response = {
+                ...response, 
+                pagamento: {
+                    pagamento_id: pagamentoResponse.pagamento_id,
+                    pagamento_expiracao: pagamentoResponse.pagamento_expiracao,
+                    pagamento_checkout_url: pagamentoResponse.pagamento_checkout_url
+                }
+            };
+            result(null, response);
+        }
+
+    })
     .catch(response => result(response, null));
 };
 
