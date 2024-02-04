@@ -1,6 +1,8 @@
 const sql = require("./db.js");
 const bcrypt = require('bcrypt');
 const saltRounds = 10; // Você pode ajustar isso conforme necessário
+const login = require("./login.js");
+const jwt = require('jsonwebtoken');
 
 const Usuario = function (usuario) {
     this.usuario_nome = usuario.nome;
@@ -58,6 +60,69 @@ Usuario.create = (newUsuario, result) => {
         });
     });
 };
+
+Usuario.createWithLogin = (newUsuario, result) => {
+    // Primeiro, verifica se já existe um usuário com o mesmo e-mail
+    sql.query("SELECT * FROM usuarios WHERE usuario_email = ?", [newUsuario.usuario_email], (err, res) => {
+        if (err) {
+            console.log("error: ", err);
+            result(err, null);
+            return;
+        }
+
+        if (res.length > 0) {
+            console.log("E-mail já cadastrado");
+            result({ kind: "email_existente" }, null);
+            return;
+        }
+
+        // Depois, verifica se já existe um usuário com o mesmo CPF
+        sql.query("SELECT * FROM usuarios WHERE usuario_cpf = ?", [newUsuario.usuario_cpf], (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                result(err, null);
+                return;
+            }
+
+            if (res.length > 0) {
+                console.log("CPF já cadastrado");
+                result({ kind: "cpf_existente" }, null);
+                return;
+            }
+
+            // Se não existir, insere o novo usuário
+            sql.query("INSERT INTO usuarios SET ?", newUsuario, (err, res) => {
+                if (err) {
+                    console.log("error: ", err);
+                    result(err, null);
+                    return;
+                }
+
+                console.log("created usuario: ", { id: res.insertId, ...newUsuario });
+                // Após criar o usuário, cria o token JWT
+                const token = jwt.sign(
+                    { id: res.insertId }, // Use o ID do usuário inserido como payload do token
+                    process.env.JWT_SECRET, // chave secreta para assinar o token
+                    { expiresIn: '1h' } // opção para definir a validade do token
+                );
+
+                // Enviar o token e informações do usuário como resposta
+                result(null, {
+                    message: "Usuário criado e login bem-sucedido.",
+                    usuario: {
+                        id: res.insertId,
+                        nome: newUsuario.usuario_nome,
+                        email: newUsuario.usuario_email
+                    },
+                    token: token
+                });
+            });
+        });
+    });
+};
+
+
+
 
 
 Usuario.findById = (id, result) => {

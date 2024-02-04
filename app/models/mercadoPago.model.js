@@ -126,7 +126,7 @@ MercadoPago.createPayment = async (body, result) => {
         },
         // notification_url: 'https://www.your-site.com/ipn',
         // external_reference: '',
-        statement_descriptor: 'Raqsa Party',
+        statement_descriptor: 'Kanz Party',
         expires: true,
         expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
         expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),

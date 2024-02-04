@@ -34,6 +34,41 @@ exports.create = (req, res) => {
   });
 };
 
+exports.createWithLogin = (req, res) => {
+  // Validate request
+  if (!req.body) {
+    res.status(400).send({
+      message: "Conteúdo não pode ser vazio!"
+    });
+  }
+
+  // Create a Usuario
+  const usuario = new Usuario({
+    nome: req.body.nome,
+    cpf: req.body.cpf,
+    email: req.body.email,
+    telefone: req.body.telefone,
+    senha: req.body.senha
+  });
+
+  if (!usuario.nome || !usuario.cpf || !usuario.email || !usuario.telefone || !usuario.senha) {
+    res.status(400).send({
+      message: "Todos os campos devem ser preenchidos"
+    });
+  }
+
+  // Save Usuario in the database
+  Usuario.createWithLogin(usuario, (err, data) => {
+    console.log(err);
+    if (err)
+      res.status(500).send({
+        message:
+          err.message || "Usuário já cadastrado."
+      });
+    else res.send(data);
+  });
+}
+
 // Retrieve all Usuarios from the database.
 exports.findAll = (req, res) => {
   const nome = req.query.nome;

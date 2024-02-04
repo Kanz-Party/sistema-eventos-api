@@ -23,7 +23,7 @@ Carrinho.findByHash = async (carrinho_hash, result) => {
                 message: `Carrinho com hash ${carrinho_hash} não encontrado`
             })
         }
-        console.log('carrinho expiracao', carrinho);
+
         if (moment(carrinho.carrinho_expiracao).isBefore(moment())) {
             return result({
                 err: 'CARRINHO_EXPIRADO',

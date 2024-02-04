@@ -1,5 +1,6 @@
 const MercadoPago = require("../models/mercadoPago.model.js");
 
+
 // Retrieve all MercadoPagos from the database.
 exports.createPayment = (req, res) => {
     
