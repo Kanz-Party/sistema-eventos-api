@@ -29,6 +29,6 @@ jobs:
       with:
         server: ftp.kanzparty.com.br
         username: kanzparty
-        password: HFt2pR7kB5
+        password: rznDpiB7!J
         local-dir: ./ 
         server-dir: ../apps_nodejs/api/
