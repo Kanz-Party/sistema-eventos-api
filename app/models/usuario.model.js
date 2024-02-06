@@ -219,7 +219,7 @@ Usuario.removeAll = result => {
 };
 
 Usuario.findByEmail = (email, result) => {
-    sql.query(`SELECT * FROM usuarios WHERE usuario_email = '${email}'`, (err, res) => {
+    sql.query(`SELECT * FROM usuarios WHERE usuario_email = ?`, [email], (err, res) => {
         if (err) {
             console.log("error: ", err);
             result(err, null);
@@ -227,13 +227,15 @@ Usuario.findByEmail = (email, result) => {
         }
 
         if (res.length) {
-            result(null, res[0]);
-            return;
+            result(null, res[0]); // Retorna o primeiro usuário encontrado
+        } else {
+            // Não encontrou o usuário com o e-mail fornecido
+            result({ kind: "not_found" }, null);
         }
-
-        // not found Usuario with the email
-        result({ kind: "not_found" }, null);
     });
 };
+
+
+
 
 module.exports = Usuario;

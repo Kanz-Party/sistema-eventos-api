@@ -8,7 +8,9 @@ module.exports = app => {
   router.post("/", usuarios.create);
 
   // Login
-  router.post("/login", usuarios.createWithLogin);
+  router.post("/create_login", usuarios.createWithLogin);
+
+  router.post("/login", usuarios.login);
 
   router.post("/verifica_sessao", verificarToken);
 

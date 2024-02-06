@@ -1,6 +1,9 @@
 const Usuario = require("../models/usuario.model.js");
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
 
 
 
@@ -150,5 +153,56 @@ exports.deleteAll = (req, res) => {
           err.message || "Some error occurred while removing all usuarios."
       });
     else res.send({ message: `All Usuarios were deleted successfully!` });
+  });
+};
+
+exports.login = (req, res) => {
+  const email = req.body.email;
+  const senha = req.body.senha;
+
+  if (!email || !senha) {
+      return res.status(400).send({ message: "Email e senha são obrigatórios." });
+  }
+
+  // Buscar usuário pelo email
+  Usuario.findByEmail(email, (err, usuario) => {
+      if (err) {
+          if (err.kind === "not_found") {
+              return res.status(404).send({ message: "Usuário não encontrado." });
+          } else {
+              return res.status(500).send({ message: "Erro ao buscar usuário." });
+          }
+      }
+
+      console.log('usuario', usuario);
+
+      console.log('senha', senha);
+
+      // Comparar a senha fornecida com a senha do usuário encontrado
+      bcrypt.compare(senha, usuario.usuario_senha, (err, isMatch) => {
+          if (err) {
+              return res.status(500).send({ message: "Erro ao verificar senha." });
+          }
+
+          if (isMatch) {
+              const token = jwt.sign(
+                  { id: usuario.usuario_id }, // Use o ID do usuário como payload do token
+                  process.env.JWT_SECRET, // chave secreta para assinar o token
+                  { expiresIn: '1h' } // opção para definir a validade do token
+              );
+
+              res.send({
+                  message: "Login bem-sucedido.",
+                  usuario: {
+                      id: usuario.usuario_id,
+                      nome: usuario.usuario_nome,
+                      email: usuario.usuario_email
+                  },
+                  token: token
+              });
+          } else {
+              res.status(401).send({ message: "Senha incorreta." });
+          }
+      });
   });
 };

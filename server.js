@@ -19,13 +19,6 @@ app.use(express.json());
 // parse requests of content-type - application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: true }));
 
-
-
-// Rota de login
-app.post("/login", (req, res) => {
-  require("./app/models/login.js").login(req, res);
-});
-
 require("./app/routes/mercadoPago.routes.js")(app);
 require("./app/routes/ingresso.routes.js")(app);
 require("./app/routes/carrinho.routes.js")(app);
