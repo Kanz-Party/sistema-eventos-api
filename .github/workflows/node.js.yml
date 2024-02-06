@@ -1,0 +1,34 @@
+name: Deploy to FTP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16' 
+
+    - name: Install Yarn
+      run: npm install -g yarn
+
+    - name: Install dependencies
+      run: yarn install
+
+
+    - name: Upload to FTP
+      uses: SamKirkland/FTP-Deploy-Action@4.0.0
+      with:
+        server: ftp.kanzparty.com.br
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./ 
+        server-dir: ../apps_nodejs/api/
