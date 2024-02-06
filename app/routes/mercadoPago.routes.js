@@ -4,7 +4,7 @@ module.exports = app => {
 
     var router = require("express").Router();
 
-    router.post("/", verificarToken, mercadoPago.createPayment);
+    router.post("/", mercadoPago.createPayment);
 
     app.use('/api/mercadoPago', router);
 };

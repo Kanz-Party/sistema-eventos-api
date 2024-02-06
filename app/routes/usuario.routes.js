@@ -1,6 +1,6 @@
 module.exports = app => {
   const usuarios = require("../controllers/usuario.controller.js");
-  const verificarSessao = require("../middlewares/Auth.js");
+
 
   var router = require("express").Router();
 
@@ -10,7 +10,7 @@ module.exports = app => {
   // Login
   router.post("/login", usuarios.createWithLogin);
 
-  router.post("/verifica_sessao", verificarSessao);
+  router.post("/verifica_sessao");
 
   // Retrieve all Usuarios
   router.get("/", usuarios.findAll);
