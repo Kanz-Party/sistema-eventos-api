@@ -1,6 +1,6 @@
 module.exports = app => {
   const usuarios = require("../controllers/usuario.controller.js");
-
+  const verificarToken = require("../middlewares/Auth.js");
 
   var router = require("express").Router();
 
@@ -10,7 +10,7 @@ module.exports = app => {
   // Login
   router.post("/login", usuarios.createWithLogin);
 
-  router.post("/verifica_sessao");
+  router.post("/verifica_sessao", verificarToken);
 
   // Retrieve all Usuarios
   router.get("/", usuarios.findAll);

@@ -51,11 +51,7 @@ exports.createWithLogin = (req, res) => {
     senha: req.body.senha
   });
 
-  if (!usuario.nome || !usuario.cpf || !usuario.email || !usuario.telefone || !usuario.senha) {
-    res.status(400).send({
-      message: "Todos os campos devem ser preenchidos"
-    });
-  }
+
 
   // Save Usuario in the database
   Usuario.createWithLogin(usuario, (err, data) => {
