@@ -39,7 +39,7 @@ app.get("/", (req, res) => {
 });
 
 // Configuração do servidor e porta
-const PORT = process.env.PORT || 8080;
+const PORT = 21021;
 app.listen(PORT, () => {
   console.log(`Servidor está rodando na porta ${PORT}.`);
 });
