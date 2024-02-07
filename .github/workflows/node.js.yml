@@ -31,4 +31,4 @@ jobs:
         username: kanzparty
         password: rznDpiB7!J
         local-dir: ./ 
-        server-dir: ../apps_nodejs/api/
+        server-dir: ../apps_nodejs/tickets/
