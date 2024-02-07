@@ -5,6 +5,6 @@ module.exports = app => {
 
     router.get("/", ingresso.findAll);
   
-    app.use('/api/ingressos', router);
+    app.use('/ingressos', router);
   };
   
