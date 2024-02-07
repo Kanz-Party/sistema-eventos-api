@@ -8,5 +8,5 @@ module.exports = app => {
 
     router.post("/receive", mercadoPago.receivePayment);
 
-    app.use('/api/mercadoPago', router);
+    app.use('/mercadoPago', router);
 };

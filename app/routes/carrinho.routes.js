@@ -8,6 +8,6 @@ module.exports = app => {
 
     router.get("/:carrinho_hash", carrinho.findByHash)
   
-    app.use('/api/carrinhos', router);
+    app.use('/carrinhos', router);
   };
   
