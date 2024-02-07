@@ -4,7 +4,9 @@ module.exports = app => {
 
     var router = require("express").Router();
 
-    router.post("/", verificarSessao, mercadoPago.createPayment);
+    router.post("/create", verificarSessao, mercadoPago.createPayment);
+
+    router.post("/receive", mercadoPago.receivePayment);
 
     app.use('/api/mercadoPago', router);
 };

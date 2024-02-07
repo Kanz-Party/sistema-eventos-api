@@ -2,9 +2,28 @@ const sql = require("./db.js");
 const moment = require('moment');
 const MercadoPagoConfig = require('mercadopago').MercadoPagoConfig;
 const Preference = require('mercadopago').Preference;
+const Payment = require('mercadopago').Payment;
+const QrCode = require("./qrcode.model.js");
+
+
+const accessToken = 'TEST-4998860730644430-011016-e8e9bec7933d9faa9557b7e19702140a-511688906';
+const client = new MercadoPagoConfig({ accessToken });
+const notificationUrl = 'https://webhook.site/404fb903-07c7-4925-8ad4-02fab80d2341'
+const statusPagamento = {
+    pending: 0,
+    approved: 1,
+    authorized: 0,
+    in_process: 0,
+    in_mediation: 0,
+    rejected: 0, // 0 pq ele pode ser rejeitado e tentar denovo, pior dos casos ele vai expirar
+    cancelled: -1,
+    refunded: -1,
+    charged_back: -1,
+}
 
 // Constructor                  
-const MercadoPago = function(mercadoPago) {
+const MercadoPago = function(empresa_id) {
+    console.log("entrou")
 };
 
 function getIngressos(carrinho_id) {
@@ -63,20 +82,24 @@ function getUsuario(usuario_id) {
 
 function insertPagamento(pagamento) {
     return new Promise((resolve, reject) => {
-        sql.query("INSERT INTO pagamentos SET ?", pagamento, (err, res) => {
+        let query = `INSERT INTO pagamentos SET ? ON DUPLICATE KEY UPDATE ?`;
+
+        sql.query(query, [pagamento, pagamento], (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 reject(err);
                 return;
             }
-            resolve({ pagamento_id: res.insertId, ...pagamento });
+
+            let id = res.insertId === 0 ? pagamento.pagamento_id : res.insertId;
+            resolve({ ...pagamento, pagamento_id: id });
         });
     });
 }
 
 function getPagamentoByCarrinhoAndUsuario(carrinho_id, usuario_id) {
     return new Promise((resolve, reject) => {
-        sql.query(`SELECT * FROM pagamentos WHERE carrinho_id = ${carrinho_id} AND usuario_id = ${usuario_id}`, (err, res) => {
+        sql.query(`SELECT pagamento_preference_id, pagamento_id FROM pagamentos WHERE carrinho_id = ${carrinho_id} AND usuario_id = ${usuario_id}`, (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 reject(err);
@@ -92,27 +115,13 @@ function getPagamentoByCarrinhoAndUsuario(carrinho_id, usuario_id) {
 }
 
 MercadoPago.createPayment = async (body, result) => {
-    const client = new MercadoPagoConfig({ accessToken: 'TEST-4998860730644430-011016-e8e9bec7933d9faa9557b7e19702140a-511688906' });
     const dateFrom = moment();
     const expirationDate = moment().add(15, 'minutes');
 
     const ingressos = await getIngressos(body.carrinho_id);
     const usuario = await getUsuario(body.usuario_id);
 
-    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
-    if(pagamentoExistente) {
-        result(null, {
-            pagamento: {
-                pagamento_id: pagamentoExistente.pagamento_id,
-                pagamento_expiracao: moment(pagamentoExistente.pagamento_expiracao).format('YYYY-MM-DD HH:mm:ss'),
-                pagamento_checkout_url: pagamentoExistente.pagamento_checkout_url
-            }
-        });
-        return;
-    }
-
-    const preference = new Preference(client);
-        preference.create({body: {
+    let preferenceBody = {
         items: ingressos.map(ingresso => {
             return {
                 id: ingresso.ingresso_id,
@@ -167,39 +176,111 @@ MercadoPago.createPayment = async (body, result) => {
           ],
           installments: 1
         },
-        // notification_url: 'https://www.your-site.com/ipn',
+        notification_url: `${notificationUrl}?carrinho_id=${body.carrinho_id}&usuario_id=${body.usuario_id}`,
         // external_reference: '',
         statement_descriptor: 'Kanz Party',
         expires: true,
         expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-        expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-    }}).then(async response => {
-        console.log(response)
-        const pagamento = {
-            carrinho_id: body.carrinho_id,
-            usuario_id: body.usuario_id,
-            pagamento_status: 0,
-            pagamento_checkout_url: response.init_point,   
-            pagamento_preference_id: response.id,
-            pagamento_expiracao: expirationDate.format('YYYY-MM-DD HH:mm:ss')
-        }
-        const pagamentoResponse = await insertPagamento(pagamento);
-        if(!pagamentoResponse.pagamento_id) {
-            result({ kind: "not_found" }, null);
-        } else {
-            response = {
-                ...response, 
-                pagamento: {
-                    pagamento_id: pagamentoResponse.pagamento_id,
-                    pagamento_expiracao: pagamentoResponse.pagamento_expiracao,
-                    pagamento_checkout_url: pagamentoResponse.pagamento_checkout_url
-                }
-            };
-            result(null, response);
-        }
+        expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ')
+    };
 
-    })
-    .catch(response => result(response, null));
+    const preference = new Preference(client);
+
+    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
+    let response = {};
+
+    if(pagamentoExistente) {
+        response = await preference.update({
+            id: pagamentoExistente.pagamento_preference_id,
+            updatePreferenceRequest: preferenceBody
+        })
+    } else {
+        response = await preference.create({
+            body: preferenceBody
+        });
+    }
+
+    if(!response.init_point || !response.id) {
+        result({ kind: "erro mercadopago" }, null);
+        return;
+    }
+
+    const pagamento = {
+        pagamento_id: pagamentoExistente.pagamento_id ? pagamentoExistente.pagamento_id : null,
+        carrinho_id: body.carrinho_id,
+        usuario_id: body.usuario_id,
+        pagamento_status: 0,
+        pagamento_checkout_url: response.init_point,   
+        pagamento_preference_id: response.id,
+        pagamento_expiracao: expirationDate.format('YYYY-MM-DD HH:mm:ss')
+    }
+
+    const pagamentoResponse = await insertPagamento(pagamento);
+    if(!pagamentoResponse.pagamento_id) {
+        result({ kind: "not_found" }, null);
+    } else {
+        response = {
+            ...response, 
+            pagamento: {
+                pagamento_id: pagamentoResponse.pagamento_id,
+                pagamento_expiracao: pagamentoResponse.pagamento_expiracao,
+                pagamento_checkout_url: pagamentoResponse.pagamento_checkout_url
+            }
+        };
+        result(null, response);
+    }
+};
+
+
+
+MercadoPago.receivePayment = async (body, result) => {
+    if(!body.data.id) {
+        result({ message: "id do pagamento não informado" }, null);
+        return;
+    }
+
+    const payment = new Payment(client);
+    let pagamentoMercadoPago = {};
+    try {        
+        pagamentoMercadoPago = await payment.get({
+            id: body.data.id,
+        });
+        if(!pagamentoMercadoPago) {
+            result({ message: "pagamento não encontrado no mercado pago" }, null);
+            return;
+        }
+    } catch (error) {
+        console.log(error);
+        result({ message: "erro ao buscar pagamento", error: error }, null);
+        return;
+    }
+
+    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
+    if(!pagamentoExistente) {
+        result({ message: "pagamento não encontrado" }, null);
+        return;
+    }
+
+    const newPagamento = {
+        pagamento_id: pagamentoExistente.pagamento_id,
+        pagamento_status: statusPagamento[pagamentoMercadoPago.status],
+        pagamento_mercadopago_id: pagamentoMercadoPago.id,
+    }
+
+    const pagamentoResponse = await insertPagamento(newPagamento);
+    if(!pagamentoResponse.pagamento_id) {
+        result({ kind: "erro ao inserir pagamento" }, null);
+        return;
+    }
+
+    //gerar qrcodes
+    QrCode.create(body, (err, res) => {
+        if (err) {
+            result(err, null);
+            return;
+        }
+        result(null, res);
+    });
 };
 
 
