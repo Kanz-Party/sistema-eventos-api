@@ -1,5 +1,7 @@
 // verificarToken.js
 const jwt = require('jsonwebtoken');
+
+
 require('dotenv').config();
 
 
@@ -12,6 +14,8 @@ const verificarSessao = (req, res, next) => {
   }
   token = token.startsWith('Bearer ') ? token.slice(7, token.length) : token;
   // Assuming jwt is already declared and initialized correctly elsewhere
+
+  console.log(process.env.JWT_SECRET);
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).send({ message: "Não autorizado!" });

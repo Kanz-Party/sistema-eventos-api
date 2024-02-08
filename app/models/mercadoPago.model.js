@@ -22,7 +22,7 @@ const statusPagamento = {
 }
 
 // Constructor                  
-const MercadoPago = function(empresa_id) {
+const MercadoPago = function (empresa_id) {
     console.log("entrou")
 };
 
@@ -118,134 +118,133 @@ MercadoPago.createPayment = async (body, result) => {
     const dateFrom = moment();
     const expirationDate = moment().add(15, 'minutes');
 
-    const ingressos = await getIngressos(body.carrinho_id);
-    const usuario = await getUsuario(body.usuario_id);
+    body.carrinho_id = 106;
+    body.usuario_id = 16;
 
-    let preferenceBody = {
-        items: ingressos.map(ingresso => {
-            return {
-                id: ingresso.ingresso_id,
-                title: ingresso.ingresso_descricao,
-                currency_id: 'BRL',
-                description: ingresso.lote_descricao,
-                category_id: 'art',
-                quantity: ingresso.lote_quantidade,
-                unit_price: Number.parseFloat(ingresso.lote_preco)
-            }
-        }),
-        payer: {
-            name: usuario.usuario_nome,
-            surname: '',
-            email: usuario.usuario_email,
-            phone: {
-                area_code: usuario.usuario_telefone,
-                number: usuario.usuario_telefone
+    let preferenceBody = {}; // Initialize preferenceBody here to scope it outside try-catch
+    let response = {}; // Initialize response here for broader scope
+
+    try {
+        console.log('executando')
+        console.log('carrinho_id', body.carrinho_id)
+        const ingressos = await getIngressos(body.carrinho_id);
+
+        console.log(ingressos);
+        const usuario = await getUsuario(body.usuario_id);
+
+        preferenceBody = {
+            items: ingressos.map(ingresso => {
+                return {
+                    id: ingresso.ingresso_id,
+                    title: ingresso.ingresso_descricao,
+                    currency_id: 'BRL',
+                    description: ingresso.lote_descricao,
+                    category_id: 'art',
+                    quantity: ingresso.lote_quantidade,
+                    unit_price: Number.parseFloat(ingresso.lote_preco)
+                }
+            }),
+            payer: {
+                name: usuario.usuario_nome,
+                surname: '',
+                email: usuario.usuario_email,
+                phone: {
+                    area_code: usuario.usuario_telefone,
+                    number: usuario.usuario_telefone
+                },
+                identification: {
+                    type: 'CPF',
+                    number: usuario.usuario_cpf
+                },
+                address: {
+                    street_name: usuario.usuario_endereco,
+                    street_number: usuario.usuario_numero,
+                    zip_code: usuario.usuario_cep
+                }
             },
-            identification: {
-                type: 'CPF',
-                number: usuario.usuario_cpf
+            payment_methods: {
+                excluded_payment_methods: [
+                    { id: "bolbradesco" },
+                    { id: "pec" }
+                ],
+                excluded_payment_types: [
+                    { id: "credit_card" },
+                    { id: "debit_card" }
+                ],
+                installments: 1
             },
-            address: {
-                street_name: usuario.usuario_endereco,
-                street_number: usuario.usuario_numero,
-                zip_code: usuario.usuario_cep
-            }
-        },
-        // back_urls: {
-        //     success: 'https://www.success.com',
-        //     failure: 'http://www.failure.com',
-        //     pending: 'http://www.pending.com'
-        // },
-        // auto_return: 'approved',
-        payment_methods: {
-          excluded_payment_methods: [
-            {
-                id: "bolbradesco"
-            },
-            {
-                id: "pec"
-            }
-          ],
-          excluded_payment_types: [
-            {
-                id: "credit_card"
-            },
-            {
-                id: "debit_card"
-            }
-          ],
-          installments: 1
-        },
-        notification_url: `${notificationUrl}?carrinho_id=${body.carrinho_id}&usuario_id=${body.usuario_id}`,
-        // external_reference: '',
-        statement_descriptor: 'Kanz Party',
-        expires: true,
-        expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-        expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ')
-    };
-
-    const preference = new Preference(client);
-
-    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
-    let response = {};
-
-    if(pagamentoExistente) {
-        response = await preference.update({
-            id: pagamentoExistente.pagamento_preference_id,
-            updatePreferenceRequest: preferenceBody
-        })
-    } else {
-        response = await preference.create({
-            body: preferenceBody
-        });
-    }
-
-    if(!response.init_point || !response.id) {
-        result({ kind: "erro mercadopago" }, null);
-        return;
-    }
-
-    const pagamento = {
-        pagamento_id: pagamentoExistente.pagamento_id ? pagamentoExistente.pagamento_id : null,
-        carrinho_id: body.carrinho_id,
-        usuario_id: body.usuario_id,
-        pagamento_status: 0,
-        pagamento_checkout_url: response.init_point,   
-        pagamento_preference_id: response.id,
-        pagamento_expiracao: expirationDate.format('YYYY-MM-DD HH:mm:ss')
-    }
-
-    const pagamentoResponse = await insertPagamento(pagamento);
-    if(!pagamentoResponse.pagamento_id) {
-        result({ kind: "not_found" }, null);
-    } else {
-        response = {
-            ...response, 
-            pagamento: {
-                pagamento_id: pagamentoResponse.pagamento_id,
-                pagamento_expiracao: pagamentoResponse.pagamento_expiracao,
-                pagamento_checkout_url: pagamentoResponse.pagamento_checkout_url
-            }
+            notification_url: `${notificationUrl}?carrinho_id=${body.carrinho_id}&usuario_id=${body.usuario_id}`,
+            statement_descriptor: 'Kanz Party',
+            expires: true,
+            expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+            expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ')
         };
-        result(null, response);
+
+        const preference = new Preference(client);
+        const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
+
+        if (pagamentoExistente) {
+            response = await preference.update({
+                id: pagamentoExistente.pagamento_preference_id,
+                updatePreferenceRequest: preferenceBody
+            });
+        } else {
+            response = await preference.create({
+                body: preferenceBody
+            });
+        }
+
+        if (!response.init_point || !response.id) {
+            throw new Error("Erro ao criar ou atualizar a preferência de pagamento no MercadoPago");
+        }
+
+        const pagamento = {
+            pagamento_id: pagamentoExistente.pagamento_id ? pagamentoExistente.pagamento_id : null,
+            carrinho_id: body.carrinho_id,
+            usuario_id: body.usuario_id,
+            pagamento_status: 0,
+            pagamento_checkout_url: response.init_point,
+            pagamento_preference_id: response.id,
+            pagamento_expiracao: expirationDate.format('YYYY-MM-DD HH:mm:ss')
+        };
+
+        const pagamentoResponse = await insertPagamento(pagamento);
+        console.log('aaa', pagamentoResponse);
+        if (!pagamentoResponse.pagamento_id) {
+            throw new Error("Erro ao inserir pagamento");
+        } else {
+            response = {
+                ...response,
+                pagamento: {
+                    pagamento_id: pagamentoResponse.pagamento_id,
+                    pagamento_expiracao: pagamentoResponse.pagamento_expiracao,
+                    pagamento_checkout_url: pagamentoResponse.pagamento_checkout_url,
+                    pagamento_preference_id: pagamentoResponse.pagamento_preference_id
+                }
+            };
+            result(null, response);
+        }
+    } catch (error) {
+        console.error("Error in createPayment:", error);
+        result({ kind: "error", error: error.message }, null);
     }
 };
 
 
 
 MercadoPago.receivePayment = async (body, result) => {
-    if(!body.data.id) {
+    if (!body.data.id) {
         result({ message: "id do pagamento não informado" }, null);
         return;
     }
 
     const payment = new Payment(client);
     let pagamentoMercadoPago = {};
-    try {        
+    try {
         pagamentoMercadoPago = await payment.get({
             id: body.data.id,
         });
-        if(!pagamentoMercadoPago) {
+        if (!pagamentoMercadoPago) {
             result({ message: "pagamento não encontrado no mercado pago" }, null);
             return;
         }
@@ -256,7 +255,7 @@ MercadoPago.receivePayment = async (body, result) => {
     }
 
     const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
-    if(!pagamentoExistente) {
+    if (!pagamentoExistente) {
         result({ message: "pagamento não encontrado" }, null);
         return;
     }
@@ -268,7 +267,7 @@ MercadoPago.receivePayment = async (body, result) => {
     }
 
     const pagamentoResponse = await insertPagamento(newPagamento);
-    if(!pagamentoResponse.pagamento_id) {
+    if (!pagamentoResponse.pagamento_id) {
         result({ kind: "erro ao inserir pagamento" }, null);
         return;
     }
