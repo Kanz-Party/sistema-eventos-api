@@ -16,13 +16,18 @@ exports.createPayment = (req, res) => {
 };
 
 exports.receivePayment = (req, res) => {
-    MercadoPago.receivePayment(req.body, (err, data) => {
-      if (err)
-        res.status(500).send({
-          message:
-            err.message || "Some error occurred while receiving payment.",
-          error: err
-        });
-      else res.send(data);
-    });
+  let body = {
+    ...req.body,
+    ...req.params
+  }
+
+  MercadoPago.receivePayment(body, (err, data) => {
+    if (err)
+      res.status(500).send({
+        message:
+          err.message || "Some error occurred while receiving payment.",
+        error: err
+      });
+    else res.send(data);
+  });
 };

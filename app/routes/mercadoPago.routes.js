@@ -8,7 +8,7 @@ module.exports = app => {
 
     router.post("/create", mercadoPago.createPayment);
 
-    router.post("/receive", mercadoPago.receivePayment);
+    router.post("/receive/:carrinho_id/:usuario_id", mercadoPago.receivePayment);
 
     app.use('/mercadoPago', router);
 };
