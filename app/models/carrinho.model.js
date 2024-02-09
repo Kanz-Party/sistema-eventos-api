@@ -1,6 +1,7 @@
 const sql = require("./db.js");
 const moment = require('moment');
 const crypto = require('crypto');
+const MercadoPago = require("./mercadoPago.model.js");
 
 const carrinho_tempo_expiracao = 15 * 60 * 1000; // 15 minutos
 
@@ -30,7 +31,7 @@ Carrinho.findByHash = async (carrinho_hash, result) => {
                 message: `Carrinho com hash ${carrinho_hash} expirado`
             })
         };
-         
+
         carrinho.carrinho_expiracao = moment(carrinho.carrinho_expiracao).format('YYYY-MM-DD HH:mm:ss');
 
         const carrinhoLotes = await getCarrinhoLotes(carrinho.carrinho_id);
@@ -63,6 +64,8 @@ const getCarrinhoLotes = (carrinho_id) => {
 Carrinho.create = async (newCarrinho, result) => {
     try {
         const { carrinho_lotes } = newCarrinho;
+        const usuarioId = newCarrinho.usuarioId;
+        delete newCarrinho.usuarioId;
         delete newCarrinho.carrinho_lotes;
 
         newCarrinho.carrinho_expiracao = moment().add(carrinho_tempo_expiracao, 'ms').format('YYYY-MM-DD HH:mm:ss');
@@ -106,10 +109,12 @@ Carrinho.create = async (newCarrinho, result) => {
             });
         }
 
+
+
         const carrinho_id = await insertCarrinho(newCarrinho);
         await insertCarrinhoLotes(carrinho_id, carrinhos_lotes_insert);
+        MercadoPago.createPayment({ carrinho_id, usuarioId }, result);
 
-        result(null, { carrinho_id: carrinho_id, carrinho_hash: newCarrinho.carrinho_hash });
     } catch (err) {
         console.error("error: ", err);
         result(err, null);

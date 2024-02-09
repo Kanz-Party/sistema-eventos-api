@@ -99,12 +99,9 @@ Usuario.createWithLogin = (newUsuario, result) => {
                 }
 
                 console.log("created usuario: ", { id: res.insertId, ...newUsuario });
-                // Após criar o usuário, cria o token JWT
-                const token = jwt.sign(
-                    { id: res.insertId }, // Use o ID do usuário inserido como payload do token
-                    process.env.JWT_SECRET, // chave secreta para assinar o token
-                    { expiresIn: '1h' } // opção para definir a validade do token
-                );
+                const token = jwt.sign({ id: res.insertId }, process.env.JWT_SECRET, {
+                    expiresIn: '1h' // 5 minutos
+                });
 
                 // Enviar o token e informações do usuário como resposta
                 result(null, {

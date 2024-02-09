@@ -4,6 +4,7 @@ const MercadoPagoConfig = require('mercadopago').MercadoPagoConfig;
 const Preference = require('mercadopago').Preference;
 const Payment = require('mercadopago').Payment;
 const QrCode = require("./qrcode.model.js");
+const { verificarSessao } = require("../middlewares/Auth.js");
 
 
 const accessToken = 'TEST-4998860730644430-011016-e8e9bec7933d9faa9557b7e19702140a-511688906';
@@ -118,19 +119,17 @@ MercadoPago.createPayment = async (body, result) => {
     const dateFrom = moment();
     const expirationDate = moment().add(15, 'minutes');
 
-    body.carrinho_id = 106;
-    body.usuario_id = 16;
-
     let preferenceBody = {}; // Initialize preferenceBody here to scope it outside try-catch
     let response = {}; // Initialize response here for broader scope
 
+
+    console.log('body', body);
+
     try {
-        console.log('executando')
-        console.log('carrinho_id', body.carrinho_id)
+
         const ingressos = await getIngressos(body.carrinho_id);
 
-        console.log(ingressos);
-        const usuario = await getUsuario(body.usuario_id);
+        const usuario = await getUsuario(body.usuarioId);
 
         preferenceBody = {
             items: ingressos.map(ingresso => {
@@ -173,7 +172,7 @@ MercadoPago.createPayment = async (body, result) => {
                 ],
                 installments: 1
             },
-            notification_url: `${notificationUrl}?carrinho_id=${body.carrinho_id}&usuario_id=${body.usuario_id}`,
+            notification_url: `${notificationUrl}?carrinho_id=${body.carrinho_id}&usuario_id=${body.usuarioId}`,
             statement_descriptor: 'Kanz Party',
             expires: true,
             expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
@@ -181,7 +180,7 @@ MercadoPago.createPayment = async (body, result) => {
         };
 
         const preference = new Preference(client);
-        const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
+        const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuarioId);
 
         if (pagamentoExistente) {
             response = await preference.update({
@@ -201,7 +200,7 @@ MercadoPago.createPayment = async (body, result) => {
         const pagamento = {
             pagamento_id: pagamentoExistente.pagamento_id ? pagamentoExistente.pagamento_id : null,
             carrinho_id: body.carrinho_id,
-            usuario_id: body.usuario_id,
+            usuario_id: body.usuarioId,
             pagamento_status: 0,
             pagamento_checkout_url: response.init_point,
             pagamento_preference_id: response.id,
@@ -254,7 +253,7 @@ MercadoPago.receivePayment = async (body, result) => {
         return;
     }
 
-    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
+    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuarioId);
     if (!pagamentoExistente) {
         result({ message: "pagamento não encontrado" }, null);
         return;

@@ -15,7 +15,6 @@ const verificarSessao = (req, res, next) => {
   token = token.startsWith('Bearer ') ? token.slice(7, token.length) : token;
   // Assuming jwt is already declared and initialized correctly elsewhere
 
-  console.log(process.env.JWT_SECRET);
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).send({ message: "Não autorizado!" });
@@ -27,17 +26,26 @@ const verificarSessao = (req, res, next) => {
 
 
 const verificarToken = (req, res, next) => {
+  console.log('aaa')
   let token = req.headers["authorization"];
   if (!token || !token.startsWith('Bearer ')) {
     return res.json({ estaLogado: false });
   }
   token = token.slice(7, token.length); // Remove 'Bearer ' do token
 
-  jwt.verify(token, process.env.JWT_SECRET, (err) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, decodedToken) => {
     if (err) {
       return res.json({ estaLogado: false });
     } else {
-      return res.json({ estaLogado: true });
+      const usuarioId = decodedToken.id;
+      return res.json({
+        estaLogado: true,
+        usuario: {
+          usuarioId: usuarioId,
+          nome: decodedToken.nome,
+          email: decodedToken.email
+        }
+      });
     }
   })
 }
