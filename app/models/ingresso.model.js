@@ -48,4 +48,6 @@ Ingresso.getAll = (result) => {
 };
 
 
+
+
 module.exports = Ingresso;

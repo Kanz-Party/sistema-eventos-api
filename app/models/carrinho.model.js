@@ -61,6 +61,58 @@ const getCarrinhoLotes = (carrinho_id) => {
     });
 };
 
+Carrinho.getMeusIngressos = (req, result) => {
+    const usuarioId = req.usuarioId;
+
+    sql.query(`SELECT carrinho_id FROM pagamentos WHERE usuario_id = ?`, [usuarioId], (err, res) => {
+        if (err) {
+            console.log("error: ", err);
+            result(err, null);
+            return;
+        }
+        if (res.length) {
+            console.log(res);
+            const carrinhos_id = res.map(carrinho => carrinho.carrinho_id);
+            console.log(carrinhos_id);
+            sql.query(`SELECT
+                c.carrinho_id,
+                i.ingresso_id,
+                i.ingresso_descricao,
+                l.lote_id,
+                l.lote_descricao,
+                cl.lote_quantidade,
+                FORMAT(ROUND(cl.lote_preco / 100, 2), 2) AS lote_preco,
+                p.*,
+                qr.qrcode_id
+              FROM
+                carrinhos c
+                JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
+                JOIN lotes l ON l.lote_id = cl.lote_id
+                JOIN ingressos i ON i.ingresso_id = l.lote_id
+                LEFT JOIN pagamentos p ON p.carrinho_id = c.carrinho_id
+                LEFT JOIN qrcodes qr ON qr.carrinho_id = c.carrinho_id
+              WHERE c.carrinho_id IN (?) AND (p.pagamento_expiracao  > NOW() OR p.pagamento_status = 1 OR p.pagamento_status = -1)
+            
+              `, [carrinhos_id], (err, res) => {
+                    if (err) {
+                        console.log("error: ", err);
+                        result(err, null);
+                        return;
+                    }
+                    if (res.length) {
+                        result(null, res);
+                    } else {
+                        result({ kind: "not_found" }, null);
+                    }
+                }
+            );
+        } else {
+            result({ kind: "not_found" }, null);
+        }
+    });
+};
+
+
 Carrinho.create = async (newCarrinho, result) => {
     try {
         const { carrinho_lotes } = newCarrinho;

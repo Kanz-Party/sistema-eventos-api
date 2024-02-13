@@ -6,7 +6,10 @@ module.exports = app => {
     // Create a new carrinho
     router.post("/", carrinho.create);
 
-    router.get("/:carrinho_hash", carrinho.findByHash)
+    router.get("/carrinho/:carrinho_hash", carrinho.findByHash);
+
+    router.get("/ingressos/meus-ingressos", carrinho.getMeusIngressos);
+    
   
     app.use('/carrinhos', router);
   };
