@@ -325,6 +325,27 @@ MercadoPago.receivePayment = async (body, result) => {
     if(newPagamento.pagamento_status === 1) {
         //atualizar preferencia para expirar
         updatePreference(pagamentoExistente.pagamento_preference_id);
+        
+        //gerar qrcodes
+        let qrCodes = [];
+        try {
+            qrCodes = await getExistantQrCodes(body.carrinho_id, body.usuario_id);
+        } catch (error) {
+            result({ kind: "erro ao buscar qrcodes" }, null);
+            return;
+        }
+        if(qrCodes.length) {
+            result(null, qrCodes);
+            return;
+        } else {
+            QrCode.create(body, (err, res) => {
+                if (err) {
+                    result(err, null);
+                    return;
+                }
+                result(null, res);
+            });
+        }
     }
 
     const pagamentoResponse = await insertPagamento(newPagamento);
@@ -333,26 +354,7 @@ MercadoPago.receivePayment = async (body, result) => {
         return;
     }    
 
-    //gerar qrcodes
-    let qrCodes = [];
-    try {
-        qrCodes = await getExistantQrCodes(body.carrinho_id, body.usuario_id);
-    } catch (error) {
-        result({ kind: "erro ao buscar qrcodes" }, null);
-        return;
-    }
-    if(qrCodes.length) {
-        result(null, qrCodes);
-        return;
-    } else {
-        QrCode.create(body, (err, res) => {
-            if (err) {
-                result(err, null);
-                return;
-            }
-            result(null, res);
-        });
-    }
+    
 
 };
 
