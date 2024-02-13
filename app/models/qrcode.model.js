@@ -1,6 +1,7 @@
 const sql = require("./db.js");
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const Pdf = require("./pdf.model.js");
 
 // Constructor
 const QrCode = function(qrcode) {
@@ -10,23 +11,23 @@ const QrCode = function(qrcode) {
 function getIngressos(carrinho_id) {
     return new Promise((resolve, reject) => {
         sql.query(`SELECT
-            carrinho_id,
-            usuario_id,
-            ingresso_id,
-            ingresso_descricao,
-            lote_id,
-            lote_descricao,
+            c.carrinho_id,
+            u.usuario_id,
+            i.ingresso_id,
+            i.ingresso_descricao,
+            l.lote_id,
+            l.lote_descricao,
             cl.lote_quantidade,
             u.usuario_email,
             u.usuario_nome,
             FORMAT(ROUND(cl.lote_preco / 100, 2), 2) as lote_preco 
             FROM carrinhos c 
-            JOIN pagamentos p USING (carrinho_id)
-            JOIN usuarios u USING (usuario_id)
-            JOIN carrinhos_lotes cl USING (carrinho_id)
-            JOIN lotes l USING (lote_id)
-            JOIN ingressos i USING (ingresso_id)
-            WHERE c.carrinho_id = ${carrinho_id}`, (err, res) => {
+            LEFT JOIN pagamentos p ON c.carrinho_id = p.carrinho_id
+            LEFT JOIN usuarios u ON p.usuario_id = u.usuario_id
+            LEFT JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
+            LEFT JOIN lotes l ON cl.lote_id = l.lote_id
+            LEFT JOIN ingressos i ON l.ingresso_id = i.ingresso_id
+            WHERE c.carrinho_id = ?`, [carrinho_id], (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 reject(err);
@@ -36,7 +37,7 @@ function getIngressos(carrinho_id) {
                 resolve(res);
                 return;
             }
-            reject({ kind: "not_found" });
+            reject({ error: "not_found", message: "Ingressos não encontrados."});
         });
     });
 }
@@ -49,47 +50,100 @@ function insertQrCode(qrcode) {
                 reject(err);
                 return;
             }
-            resolve({ id: res.insertId, ...qrcode });
+            resolve({ qrcode_id: res.insertId, ...qrcode });
         });
     });
 }
 
-function sendEmails(ingressos) {
+function sendEmails(qrcodes) {
     return new Promise((resolve, reject) => {
+        Pdf.generate(qrcodes, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            resolve(res);
+        });
+
+        let transporter = nodemailer.createTransport({
+            host: 'smtp-vip.kinghost.net.',
+            auth: {
+                user: 'naoresponda@kanzparty.com.br',
+                pass: 'W83qp5eQ40@'
+            }
+        });
+
         let mailOptions = {
-            from: 'victor.tramontina0609@gmail.com',
-            to: ingressos[0].usuario_email,
-            subject: `Olá, ${ingressos[0].usuario_nome}! Seus ingressos estão prontos!`,
+            from: 'naoresponda@kanzparty.com.br',
+            to: qrcodes[0].usuario_email,
+            subject: `Olá, ${qrcodes[0].usuario_nome}! Seus ingressos estão prontos!`,
+            attachments: [
+                {
+                    filename: `${qrcodes[0].carrinho_id}.pdf`,
+                    path: `app/assets/ingressos/${qrcodes[0].carrinho_id}.pdf`,
+                    contentType: 'application/pdf'
+                }
+            ]
         };
+
+        transporter.sendMail(mailOptions, function(error, info){
+            if (error) {
+                console.log(error);
+                reject(error);
+            } else {
+                console.log('Email sent: ' + info.response);
+                resolve(info.response);
+            }
+        });
     });
 }
 
-function generatePdf(ingresso) {
-    
-}
-
-
 QrCode.create = async (body, result) => {
-    let ingressos = await getIngressos(body.carrinho_id);
+    let ingressos = [];
+    try {
+        ingressos = await getIngressos(body.carrinho_id);
+    } catch (error) {
+        result(error, null);
+        return;
+    }
+    let qrCodes = [];
 
     for(const ingresso of ingressos) {
         for(let i = 0; i < Number.parseInt(ingresso.lote_quantidade); i++) {
-            const sha256 = crypto.createHash('sha256'); 
             const qrCode = {
-                lote_id: ingresso.lote_id,
+                carrinho_id: ingresso.carrinho_id,
                 usuario_id: ingresso.usuario_id,
-                qrcode_hash: sha256.update(`${body.carrinho_id}-${ingresso.lote_id}-${ingresso.lote_id}-${i}`).digest('hex')
+                lote_id: ingresso.lote_id,
+                qrcode_ativo: 1,
             };
-            ingresso.qrcode_hash = qrCode.qrcode_hash;
 
             try {
-                await insertQrCode(qrCode);
+                let newQrCode = await insertQrCode(qrCode);
+                qrCodes.push({
+                    ...newQrCode,
+                    ingresso_descricao: ingresso.ingresso_descricao,
+                    lote_descricao: ingresso.lote_descricao,
+                    usuario_email: ingresso.usuario_email,
+                    usuario_nome: ingresso.usuario_nome,
+                    lote_preco: ingresso.lote_preco,
+                    carrinho_id: ingresso.carrinho_id
+                });
             } catch (error) {
                 result(error, null);
                 return;
             }
         }
     }
+
+    try {
+        await sendEmails(qrCodes);
+    } catch (error) {
+        result(error, null);
+        return;
+    }
+
+    result(null, qrCodes);
 };
 
 

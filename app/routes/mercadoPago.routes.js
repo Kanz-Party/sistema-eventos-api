@@ -1,5 +1,3 @@
-
-
 module.exports = app => {
     const mercadoPago = require("../controllers/mercadoPago.controller.js");
     const verificarSessao = require("../middlewares/Auth.js");

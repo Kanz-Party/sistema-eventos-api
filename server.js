@@ -22,6 +22,8 @@ app.use(express.urlencoded({ extended: true }));
 require("./app/routes/mercadoPago.routes.js")(app);
 require("./app/routes/ingresso.routes.js")(app);
 require("./app/routes/carrinho.routes.js")(app);
+require("./app/routes/qrcodes.routes.js")(app);
+
 // Rotas protegidas que exigem autenticação
 
 require("./app/routes/empresa.routes.js")(app);

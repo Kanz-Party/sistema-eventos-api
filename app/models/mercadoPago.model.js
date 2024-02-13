@@ -264,6 +264,26 @@ MercadoPago.createPayment = async (body, result) => {
     }
 };
 
+function getExistantQrCodes(carrinho_id, usuario_id) {
+    return new Promise((resolve, reject) => {
+        sql.query(`SELECT qrcode_id FROM qrcodes WHERE carrinho_id = ${carrinho_id} AND usuario_id = ${usuario_id}`, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            if (res.length) {
+                resolve(res);
+                return;
+            } else {
+                resolve([]);
+            }
+            reject({ kind: "not_found" });
+        });
+    });
+
+}
+
 
 
 MercadoPago.receivePayment = async (body, result) => {
@@ -314,13 +334,26 @@ MercadoPago.receivePayment = async (body, result) => {
     }    
 
     //gerar qrcodes
-    QrCode.create(body, (err, res) => {
-        if (err) {
-            result(err, null);
-            return;
-        }
-        result(null, res);
-    });
+    let qrCodes = [];
+    try {
+        qrCodes = await getExistantQrCodes(body.carrinho_id, body.usuario_id);
+    } catch (error) {
+        result({ kind: "erro ao buscar qrcodes" }, null);
+        return;
+    }
+    if(qrCodes.length) {
+        result(null, qrCodes);
+        return;
+    } else {
+        QrCode.create(body, (err, res) => {
+            if (err) {
+                result(err, null);
+                return;
+            }
+            result(null, res);
+        });
+    }
+
 };
 
 
