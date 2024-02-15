@@ -117,7 +117,7 @@ const expirarCarrinhosJaPendentesDoUsuario = (usuarioId) => {
         sql.query("UPDATE carrinhos SET carrinho_expiracao = ? WHERE carrinho_id IN (SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0)", [dataExpiracao, usuarioId], (err, res) => {
             if (err) return reject(err);
         });
-        sql.query("UPDATE pagamentos SET pagamento_status, pagamento_expiracao = ? WHERE usuario_id = ? AND pagamento_status = 0", [dataExpiracao, usuarioId], (err, res) => {
+        sql.query("UPDATE pagamentos SET pagamento_status = -1, pagamento_expiracao = ? WHERE usuario_id = ? AND pagamento_status = 0", [dataExpiracao, usuarioId], (err, res) => {
             if (err) return reject(err);
             resolve(res);
         });
