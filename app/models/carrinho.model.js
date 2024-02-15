@@ -112,6 +112,15 @@ Carrinho.getMeusIngressos = (req, result) => {
     });
 };
 
+const expirarCarrinhosJaPendentesDoUsuario = (usuarioId) => {
+    return new Promise((resolve, reject) => {
+        const dataExpiracao = moment().format('YYYY-MM-DD HH:mm:ss');
+        sql.query("UPDATE carrinhos SET carrinho_expiracao = ? WHERE carrinho_id IN (SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0)", [dataExpiracao, usuarioId], (err, res) => {
+            if (err) return reject(err);
+            resolve(res);
+        });
+    });
+}
 
 Carrinho.create = async (newCarrinho, result) => {
     try {

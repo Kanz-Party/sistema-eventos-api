@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const crypto = require('crypto');
+const path = require('path'); 
 const chaveSecreta = crypto.randomBytes(32).toString('hex');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
@@ -12,6 +13,8 @@ var corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+app.use('/images', express.static(path.join(__dirname, 'app', 'assets', 'images')));
 
 // parse requests of content-type - application/json
 app.use(express.json());

@@ -2,6 +2,7 @@ const sql = require("./db.js");
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const Pdf = require("./pdf.model.js");
+const ingressos_email = require("../assets/emails/ingressos.js");
 
 // Constructor
 const QrCode = function(qrcode) {
@@ -56,15 +57,14 @@ function insertQrCode(qrcode) {
 }
 
 function sendEmails(qrcodes) {
-    return new Promise((resolve, reject) => {
-        Pdf.generate(qrcodes, (err, res) => {
-            if (err) {
-                console.log("error: ", err);
-                reject(err);
-                return;
-            }
-            resolve(res);
-        });
+    return new Promise(async (resolve, reject) => {
+        await Pdf.generate(qrcodes);
+
+        const carrinho_id = qrcodes[0].carrinho_id;
+        const usuario_nome = qrcodes[0].usuario_nome;
+        const usuario_email = qrcodes[0].usuario_email;
+
+        return resolve();
 
         let transporter = nodemailer.createTransport({
             host: 'smtp-vip.kinghost.net.',
@@ -76,15 +76,14 @@ function sendEmails(qrcodes) {
 
         let mailOptions = {
             from: 'naoresponda@kanzparty.com.br',
-            to: qrcodes[0].usuario_email,
-            subject: `Olá, ${qrcodes[0].usuario_nome}! Seus ingressos estão prontos!`,
-            attachments: [
-                {
-                    filename: `${qrcodes[0].carrinho_id}.pdf`,
-                    path: `app/assets/ingressos/${qrcodes[0].carrinho_id}.pdf`,
-                    contentType: 'application/pdf'
-                }
-            ]
+            to: usuario_email,
+            subject: `Olá, ${usuario_nome}! Seus ingressos estão prontos!`,
+            html: ingressos_email.generate(qrcodes),
+            attachments: qrcodes.map(qrCode => ({
+                filename: `${qrCode.qrcode_id}.pdf`,
+                path: `app/assets/ingressos/${carrinho_id}/${qrCode.qrcode_id}.pdf`,
+                contentType: 'application/pdf'
+            }))
         };
 
         transporter.sendMail(mailOptions, function(error, info){

@@ -1,110 +1,82 @@
-const sql = require("./db.js");
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-const PDFDocument = require('pdfkit');
 const fs = require('fs');
+const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
-const { callbackPromise } = require("nodemailer/lib/shared/index.js");
 
-const Pdf = function(pdf) {
-};
+const Pdf = {};
 
-// {
-//     "qrcode_id": 14681,
-//     "carrinho_id": 1542,
-//     "usuario_id": 4,
-//     "lote_id": 2,
-//     "qrcode_ativo": 1,
-//     "ingresso_descricao": "Pista (Feminino)",
-//     "lote_descricao": "Lote Promocional",
-//     "usuario_email": "victor.tramontina0609@gmail.com",
-//     "usuario_nome": "Victor Tramontina",
-//     "lote_preco": "25.00"
-// }
+Pdf.generate = async (ingressos) => {
+    const generatePdf = (ingresso) => {
+        return new Promise((resolve, reject) => {
+            const dir = `app/assets/ingressos/${ingresso.carrinho_id}/`;
 
-Pdf.generate = (ingressos, result) => {
-    // Create a new PDF document
-    let doc = new PDFDocument;
-
-    const dir = `app/assets/ingressos/`;
-
-    if (!fs.existsSync(dir)){
-        fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // Pipe its output to a file
-    doc.pipe(fs.createWriteStream(`${dir}${ingressos[0].carrinho_id}.pdf`));
-
-    // Function to generate a page for an ingresso
-    const generatePage = (ingresso, isLast, callback) => {
-        // Generate QR code
-        QRCode.toDataURL(ingresso.qrcode_id.toString(), function (err, url) {
-            if (err) {
-                console.log(err);
-                return callback(err);
+            if(!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
             }
-    
-            // titulo
-            doc.fontSize(24)
-                .text(`Ingresso #${ingresso.qrcode_id.toString()}`, { align: 'center' })
-                .moveDown(2); // Adjust the spacing
-    
-            // QR code
-            doc.image(url, {
-                fit: [200, 200],
-                align: 'center'
+
+            const doc = new PDFDocument();
+            const filePath = `${dir}${ingresso.qrcode_id}.pdf`;
+
+            const writeStream = fs.createWriteStream(filePath);
+            doc.pipe(writeStream);
+
+            QRCode.toDataURL(ingresso.qrcode_id.toString(), async function (err, url) {
+                if (err) {
+                    console.log(err);
+                    reject(err);
+                }
+
+                doc.fontSize(24)
+                    .text(`Ingresso #${ingresso.qrcode_id.toString()}`, { align: 'center' })
+                    .moveDown(2);
+
+                const pdfWidth = doc.page.width;
+                const qrCodeSize = 300; // The size of the QR code
+                const qrCodePosX = (pdfWidth - qrCodeSize) / 2; // Calculate the position of the QR code
+
+                doc.image(url, {
+                    fit: [qrCodeSize, qrCodeSize],
+                    align: 'center',
+                    valign: 'center',
+                    x: qrCodePosX // Set the x position of the QR code
+                });
+
+                doc.fontSize(18)
+                    .text('Apresente este código QR na entrada!', { align: 'center' })
+                    .moveDown();
+
+                doc.fontSize(14)
+                    .text(`Ingresso: ${ingresso.ingresso_descricao} - ${ingresso.lote_descricao}`, { align: 'center' })
+                    .moveDown();
+
+                doc.fontSize(12)
+                    .text('Te esperamos na Kanz Party!', { align: 'center' });
+
+                doc.end();
+
+                writeStream.on('finish', function () {
+                    resolve(filePath);
+                });
+
+                writeStream.on('error', function (err) {
+                    reject(err);
+                });
             });
-    
-            // texto 
-            doc.fontSize(18)
-                .text('Apresente este código QR na entrada!', { align: 'center' })
-                .moveDown(); // Adjust the spacing
-    
-            // Add the ingresso text
-            doc.fontSize(14)
-                .text(`Ingresso: ${ingresso.ingresso_descricao} - ${ingresso.lote_descricao}`, { align: 'center' })
-                .moveDown(); // Adjust the spacing
-    
-            // Add a footer
-            doc.fontSize(12)
-                .text('Te esperamos na Kanz Party!', { align: 'center' });
-    
-            // Add a page break if this is not the last ingresso
-            if (!isLast) {
-                doc.addPage();
-            }
-    
-            callback(null);
         });
     };
 
-    // Generate a page for each ingresso
-    // This is done using a recursive function to ensure that the pages are generated in the correct order
-    let i = 0;
-    const next = () => {
-        if (i < ingressos.length) {
-            generatePage(ingressos[i], i === ingressos.length - 1, (err) => {
-                if (err) {
-                    result(err, null);
-                } else {
-                    i++;
-                    next();
-                }
-            });
-        } else {
-            // Finalize the PDF and end the stream
-            doc.end();
-
-            doc.on('finish', function() {
-                result(null, true);
-            });
-
-            doc.on('error', function(err) {
-                result(err, null);
-            });
+    try {
+        const pdfPaths = [];
+        let i = 0;
+        for (const ingresso of ingressos) {
+            i++;
+            if(i>2) break;
+            const pdfPath = await generatePdf(ingresso);
+            pdfPaths.push(pdfPath);
         }
-    };
-    next();
+        return pdfPaths;
+    } catch (error) {
+        throw error;
+    }
 };
 
 module.exports = Pdf;
