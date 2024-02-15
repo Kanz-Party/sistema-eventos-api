@@ -7,9 +7,9 @@ const QrCode = require("./qrcode.model.js");
 const { verificarSessao } = require("../middlewares/Auth.js");
 
 
-const accessToken = 'TEST-7617401898799737-013119-2f90e3fc002b2445475f5afa368a010c-1661485047';
+const accessToken = 'APP_USR-7617401898799737-013119-e2dece07bf195ced26078839c4f55746-1661485047';
 const client = new MercadoPagoConfig({ accessToken });
-const notificationUrl = 'https://webhook.site/404fb903-07c7-4925-8ad4-02fab80d2341'
+const notificationUrl = 'https://kanzparty.com.br/api/mercadoPago/receive'
 const statusPagamento = {
     pending: 0,
     approved: 1,
@@ -115,6 +115,40 @@ function getPagamentoByCarrinhoAndUsuario(carrinho_id, usuario_id) {
     });
 }
 
+function updatePreference(preference_id) {
+    return new Promise(async (resolve, reject) => {
+        const preference = new Preference(client);
+        let newExpirationDate = moment()
+
+        let preferenceBody = await preference.get({preferenceId: preference_id})
+        if(!preferenceBody.id) {
+            reject({ kind: "not_found" });
+        }
+        // fazer a preferencia expirar 
+        preferenceBody.expiration_date_to = newExpirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ');
+        preferenceBody.date_of_expiration = newExpirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ');
+        delete preferenceBody.id;
+        preference.update({
+            id: preference_id,
+            updatePreferenceRequest: preferenceBody
+        }).then(response => {
+            resolve(response);
+        }).catch(error => {
+            reject(error);
+        });
+
+        sql.query(`UPDATE pagamentos SET pagamento_expiracao = '${newExpirationDate.format('YYYY-MM-DD HH:mm:ss')}' WHERE pagamento_preference_id = '${preference_id}'`, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            resolve(res);
+        });
+    });
+
+}
+
 MercadoPago.createPayment = async (body, result) => {
     const dateFrom = moment();
     const expirationDate = moment().add(15, 'minutes');
@@ -161,22 +195,23 @@ MercadoPago.createPayment = async (body, result) => {
                     zip_code: usuario.usuario_cep
                 }
             },
-            payment_methods: {
-                excluded_payment_methods: [
-                    { id: "bolbradesco" },
-                    { id: "pec" }
-                ],
-                excluded_payment_types: [
-                    { id: "credit_card" },
-                    { id: "debit_card" }
-                ],
-                installments: 1
-            },
-            notification_url: `${notificationUrl}?carrinho_id=${body.carrinho_id}&usuario_id=${body.usuarioId}`,
+            // payment_methods: {
+            //     excluded_payment_methods: [
+            //         { id: "bolbradesco" },
+            //         { id: "pec" }
+            //     ],
+            //     excluded_payment_types: [
+            //         { id: "credit_card" },
+            //         { id: "debit_card" }
+            //     ],
+            //     installments: 1
+            // },
+            notification_url: `${notificationUrl}/${body.carrinho_id}/${body.usuario_id}?source_news=webhooks`,
             statement_descriptor: 'Kanz Party',
             expires: true,
             expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-            expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ')
+            expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+            date_of_expiration: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ')
         };
 
         const preference = new Preference(client);
@@ -208,7 +243,7 @@ MercadoPago.createPayment = async (body, result) => {
         };
 
         const pagamentoResponse = await insertPagamento(pagamento);
-        console.log('aaa', pagamentoResponse);
+
         if (!pagamentoResponse.pagamento_id) {
             throw new Error("Erro ao inserir pagamento");
         } else {
@@ -229,10 +264,31 @@ MercadoPago.createPayment = async (body, result) => {
     }
 };
 
+function getExistantQrCodes(carrinho_id, usuario_id) {
+    return new Promise((resolve, reject) => {
+        sql.query(`SELECT qrcode_id FROM qrcodes WHERE carrinho_id = ${carrinho_id} AND usuario_id = ${usuario_id}`, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            if (res.length) {
+                resolve(res);
+                return;
+            } else {
+                resolve([]);
+            }
+            reject({ kind: "not_found" });
+        });
+    });
+
+}
+
 
 
 MercadoPago.receivePayment = async (body, result) => {
-    if (!body.data.id) {
+    console.log(body)
+    if (!body || !body.data || !body.data.id || !body.carrinho_id || !body.usuario_id) {    
         result({ message: "id do pagamento não informado" }, null);
         return;
     }
@@ -259,26 +315,47 @@ MercadoPago.receivePayment = async (body, result) => {
         return;
     }
 
+    
     const newPagamento = {
         pagamento_id: pagamentoExistente.pagamento_id,
         pagamento_status: statusPagamento[pagamentoMercadoPago.status],
         pagamento_mercadopago_id: pagamentoMercadoPago.id,
+    }
+    
+    if(newPagamento.pagamento_status === 1) {
+        //atualizar preferencia para expirar
+        updatePreference(pagamentoExistente.pagamento_preference_id);
+        
+        //gerar qrcodes
+        let qrCodes = [];
+        try {
+            qrCodes = await getExistantQrCodes(body.carrinho_id, body.usuario_id);
+        } catch (error) {
+            result({ kind: "erro ao buscar qrcodes" }, null);
+            return;
+        }
+        if(qrCodes.length) {
+            result(null, qrCodes);
+            return;
+        } else {
+            QrCode.create(body, (err, res) => {
+                if (err) {
+                    result(err, null);
+                    return;
+                }
+                result(null, res);
+            });
+        }
     }
 
     const pagamentoResponse = await insertPagamento(newPagamento);
     if (!pagamentoResponse.pagamento_id) {
         result({ kind: "erro ao inserir pagamento" }, null);
         return;
-    }
+    }    
 
-    //gerar qrcodes
-    QrCode.create(body, (err, res) => {
-        if (err) {
-            result(err, null);
-            return;
-        }
-        result(null, res);
-    });
+    
+
 };
 
 
