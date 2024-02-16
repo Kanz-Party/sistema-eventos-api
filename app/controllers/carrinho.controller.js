@@ -78,6 +78,7 @@ exports.getMeusIngressos = (req, res) => {
 
         // Now call Carrinho.getMeusIngressos with the modified request
         Carrinho.getMeusIngressos(req, (err, data) => {
+
             if (err) {
                 return res.status(500).send({
                     err: err.err || "ERRO_INTERNO",
