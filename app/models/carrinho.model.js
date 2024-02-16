@@ -64,13 +64,14 @@ const getCarrinhoLotes = (carrinho_id) => {
 Carrinho.getMeusIngressos = (req, result) => {
     const usuarioId = req.usuarioId;
 
-    sql.query(`SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status != -1`, [usuarioId], (err, res) => {
+    sql.query(`SELECT carrinho_id FROM pagamentos WHERE usuario_id = ?`, [usuarioId], (err, res) => {
         if (err) {
             console.log("error: ", err);
             result(err, null);
             return;
         }
         if (res.length) {
+            console.log(res);
             const carrinhos_id = res.map(carrinho => carrinho.carrinho_id);
             console.log(carrinhos_id);
             sql.query(`SELECT
@@ -85,28 +86,28 @@ Carrinho.getMeusIngressos = (req, result) => {
                 qr.qrcode_id
               FROM
                 carrinhos c
-                LEFT JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
-                LEFT JOIN lotes l ON l.lote_id = cl.lote_id
-                LEFT JOIN ingressos i ON i.ingresso_id = l.lote_id
+                JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
+                JOIN lotes l ON l.lote_id = cl.lote_id
+                JOIN ingressos i ON i.ingresso_id = l.lote_id
                 LEFT JOIN pagamentos p ON p.carrinho_id = c.carrinho_id
                 LEFT JOIN qrcodes qr ON qr.carrinho_id = c.carrinho_id
-              WHERE c.carrinho_id IN (?) AND (p.pagamento_expiracao > NOW() OR p.pagamento_status = 1)
+              WHERE c.carrinho_id IN (?) AND (p.pagamento_expiracao  > NOW() OR p.pagamento_status = 1 OR p.pagamento_status = -1)
             
               `, [carrinhos_id], (err, res) => {
-                    if (err) {
-                        console.log("error: ", err);
-                        result(err, null);
-                        return;
-                    }
-                    if (res.length) {
-                        result(null, res);
-                    } else {
-                        result(null, []);
-                    }
+                if (err) {
+                    console.log("error: ", err);
+                    result(err, null);
+                    return;
                 }
+                if (res.length) {
+                    result(null, res);
+                } else {
+                    result({ kind: "not_found" }, null);
+                }
+            }
             );
         } else {
-            result(null, []);
+            result({ kind: "not_found" }, null);
         }
     });
 };
@@ -116,9 +117,6 @@ const expirarCarrinhosJaPendentesDoUsuario = (usuarioId) => {
         const dataExpiracao = moment().format('YYYY-MM-DD HH:mm:ss');
         sql.query("UPDATE carrinhos SET carrinho_expiracao = ? WHERE carrinho_id IN (SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0)", [dataExpiracao, usuarioId], (err, res) => {
             if (err) return reject(err);
-        });
-        sql.query("UPDATE pagamentos SET pagamento_status = -1, pagamento_expiracao = ? WHERE usuario_id = ? AND pagamento_status = 0", [dataExpiracao, usuarioId], (err, res) => {
-            if (err) return reject(err);
             resolve(res);
         });
     });
@@ -126,44 +124,55 @@ const expirarCarrinhosJaPendentesDoUsuario = (usuarioId) => {
 
 Carrinho.create = async (newCarrinho, result) => {
     try {
+        console.log('Iniciando criação do carrinho com dados:', newCarrinho);
+
         const { carrinho_lotes } = newCarrinho;
         const usuarioId = newCarrinho.usuarioId;
+        console.log('Dados extraídos: carrinho_lotes e usuarioId', carrinho_lotes, usuarioId);
+
         delete newCarrinho.usuarioId;
         delete newCarrinho.carrinho_lotes;
-
-        await expirarCarrinhosJaPendentesDoUsuario(usuarioId);
+        console.log('Dados de usuário e lotes removidos do newCarrinho', newCarrinho);
 
         newCarrinho.carrinho_expiracao = moment().add(carrinho_tempo_expiracao, 'ms').format('YYYY-MM-DD HH:mm:ss');
         newCarrinho.carrinho_hash = crypto.randomBytes(20).toString('hex');
+        console.log('Definidos carrinho_expiracao e carrinho_hash', newCarrinho.carrinho_expiracao, newCarrinho.carrinho_hash);
 
         const lotes_db = await getLotesDb(carrinho_lotes);
+        console.log('Lotes obtidos do banco de dados:', lotes_db);
 
         let carrinhos_lotes_insert = [];
         for (const carrinho_lote of carrinho_lotes) {
+            console.log('Processando lote:', carrinho_lote);
+
             const data_atual = moment().format('YYYY-MM-DD HH:mm:ss');
             const lote_db = lotes_db.find(l => l.lote_id === carrinho_lote.lote_id);
+            console.log('Dados do lote_db encontrados:', lote_db);
 
             if (!lote_db || lote_db.lote_quantidade < carrinho_lote.lote_quantidade) {
+                console.log(`Quantidade indisponível para o lote ${carrinho_lote.lote_id}`);
                 result({
                     err: 'QUANTIDADE_INDISPONIVEL',
                     message: `Quantidade indisponível para o lote ${carrinho_lote.lote_id}`
-                })
+                });
                 return;
             }
 
             if (lote_db.lote_quantidade_maxima < carrinho_lote.lote_quantidade) {
+                console.log(`Quantidade máxima excedida para o lote ${carrinho_lote.lote_id}`);
                 result({
                     err: 'QUANTIDADE_MAXIMA_EXCEDIDA',
                     message: `Quantidade máxima excedida para o lote ${carrinho_lote.lote_id}`
-                })
+                });
                 return;
             }
 
             if (lote_db.lote_data_inicio_venda > data_atual || lote_db.lote_data_fim_venda < data_atual) {
+                console.log(`Lote ${carrinho_lote.lote_id} fora da venda`);
                 result({
                     err: 'LOTE_FORA_DA_VENDA',
                     message: `Lote ${carrinho_lote.lote_id} fora da venda`
-                })
+                });
                 return;
             }
 
@@ -172,19 +181,28 @@ Carrinho.create = async (newCarrinho, result) => {
                 lote_preco: lote_db.lote_preco,
                 lote_quantidade: carrinho_lote.lote_quantidade
             });
+            console.log('Lote adicionado para inserção:', carrinho_lote.lote_id);
         }
 
-
-
+        console.log('Inserindo carrinho...');
         const carrinho_id = await insertCarrinho(newCarrinho);
+        console.log('Carrinho inserido com ID:', carrinho_id);
+
+        console.log('Inserindo lotes no carrinho...');
         await insertCarrinhoLotes(carrinho_id, carrinhos_lotes_insert);
+        console.log('Lotes inseridos no carrinho:', carrinhos_lotes_insert);
+
+        console.log('Criando pagamento no MercadoPago...');
         MercadoPago.createPayment({ carrinho_id, usuarioId }, result);
+    
+    
 
     } catch (err) {
         console.error("error: ", err);
         result(err, null);
     }
 };
+
 
 const insertCarrinho = (carrinho) => {
     return new Promise((resolve, reject) => {
