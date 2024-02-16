@@ -7,7 +7,7 @@ const QrCode = require("./qrcode.model.js");
 const { verificarSessao } = require("../middlewares/Auth.js");
 
 
-const accessToken = 'APP_USR-7617401898799737-013119-e2dece07bf195ced26078839c4f55746-1661485047';
+const accessToken = 'APP_USR-4998860730644430-011016-9ef57c284e2b4873242bd5794e46f4bd-511688906';
 const client = new MercadoPagoConfig({ accessToken });
 const notificationUrl = 'https://kanzparty.com.br/api/mercadoPago/receive'
 const statusPagamento = {
@@ -188,17 +188,17 @@ MercadoPago.createPayment = async (body, result) => {
                     zip_code: usuario.usuario_cep
                 }
             },
-            // payment_methods: {
-            //     excluded_payment_methods: [
-            //         { id: "bolbradesco" },
-            //         { id: "pec" }
-            //     ],
-            //     excluded_payment_types: [
-            //         { id: "credit_card" },
-            //         { id: "debit_card" }
-            //     ],
-            //     installments: 1
-            // },
+            payment_methods: {
+                excluded_payment_methods: [
+                    { id: "bolbradesco" },
+                    { id: "pec" }
+                ],
+                excluded_payment_types: [
+                    { id: "credit_card" },
+                    { id: "debit_card" }
+                ],
+                installments: 1
+            },
             notification_url: `${notificationUrl}/${body.carrinho_id}/${body.usuario_id}?source_news=webhooks`,
             statement_descriptor: 'Kanz Party',
             expires: true,

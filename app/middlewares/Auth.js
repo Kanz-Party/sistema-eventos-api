@@ -50,8 +50,5 @@ const verificarToken = (req, res, next) => {
   })
 }
 
-
-
-
 module.exports = verificarSessao;
 module.exports = verificarToken;
