@@ -74,7 +74,7 @@ function sendEmails(qrcodes) {
 
         let mailOptions = {
             from: 'naoresponda@kanzparty.com.br',
-            to: usuario_email,
+            to: "test-dd4464@test.mailgenius.com",
             subject: `Olá, ${usuario_nome}! Seus ingressos estão prontos!`,
             html: ingressos_email.generate(qrcodes),
             attachments: qrcodes.map(qrCode => ({
