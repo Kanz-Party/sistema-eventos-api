@@ -24,25 +24,24 @@ const statusPagamento = {
 
 // Constructor                  
 const MercadoPago = function (empresa_id) {
-    console.log("entrou")
 };
 
 function getIngressos(carrinho_id) {
     return new Promise((resolve, reject) => {
         sql.query(`SELECT
-            carrinho_id,
-            ingresso_id,
-            ingresso_descricao,
-            lote_id,
-            lote_descricao,
+            c.carrinho_id,
+            i.ingresso_id,
+            i.ingresso_descricao,
+            l.lote_id,
+            l.lote_descricao,
             cl.lote_quantidade,
             FORMAT(ROUND(cl.lote_preco / 100, 2), 2) as lote_preco FROM
-            carrinhos c JOIN carrinhos_lotes cl USING (carrinho_id)
-            JOIN lotes l USING (lote_id)
-            JOIN ingressos i USING (ingresso_id)
-            WHERE c.carrinho_id = ${carrinho_id}`, (err, res) => {
+            carrinhos c 
+            LEFT JOIN carrinhos_lotes cl on c.carrinho_id = cl.carrinho_id
+            LEFT JOIN lotes l USING (lote_id)
+            LEFT JOIN ingressos i USING (ingresso_id)
+            WHERE c.carrinho_id = ?`, [carrinho_id], (err, res) => {
             if (err) {
-                console.log("error: ", err);
                 reject(err);
                 return;
             }
@@ -66,9 +65,8 @@ function getUsuario(usuario_id) {
             usuario_endereco,
             usuario_numero,
             usuario_cep
-            FROM usuarios WHERE usuario_id = ${usuario_id}`, (err, res) => {
+            FROM usuarios WHERE usuario_id = ?`, [usuario_id], (err, res) => {
             if (err) {
-                console.log("error: ", err);
                 reject(err);
                 return;
             }
@@ -87,7 +85,6 @@ function insertPagamento(pagamento) {
 
         sql.query(query, [pagamento, pagamento], (err, res) => {
             if (err) {
-                console.log("error: ", err);
                 reject(err);
                 return;
             }
@@ -100,9 +97,8 @@ function insertPagamento(pagamento) {
 
 function getPagamentoByCarrinhoAndUsuario(carrinho_id, usuario_id) {
     return new Promise((resolve, reject) => {
-        sql.query(`SELECT pagamento_preference_id, pagamento_id FROM pagamentos WHERE carrinho_id = ${carrinho_id} AND usuario_id = ${usuario_id}`, (err, res) => {
+        sql.query(`SELECT pagamento_preference_id, pagamento_id FROM pagamentos WHERE carrinho_id = ? AND usuario_id = ?`, [carrinho_id, usuario_id], (err, res) => {
             if (err) {
-                console.log("error: ", err);
                 reject(err);
                 return;
             }
@@ -137,7 +133,7 @@ function updatePreference(preference_id) {
             reject(error);
         });
 
-        sql.query(`UPDATE pagamentos SET pagamento_expiracao = '${newExpirationDate.format('YYYY-MM-DD HH:mm:ss')}' WHERE pagamento_preference_id = '${preference_id}'`, (err, res) => {
+        sql.query(`UPDATE pagamentos SET pagamento_expiracao = ? WHERE pagamento_preference_id = ?`, [newExpirationDate.format('YYYY-MM-DD HH:mm:ss'), preference_id], (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 reject(err);
@@ -155,9 +151,6 @@ MercadoPago.createPayment = async (body, result) => {
 
     let preferenceBody = {}; // Initialize preferenceBody here to scope it outside try-catch
     let response = {}; // Initialize response here for broader scope
-
-
-    console.log('body', body);
 
     try {
 
@@ -266,7 +259,7 @@ MercadoPago.createPayment = async (body, result) => {
 
 function getExistantQrCodes(carrinho_id, usuario_id) {
     return new Promise((resolve, reject) => {
-        sql.query(`SELECT qrcode_id FROM qrcodes WHERE carrinho_id = ${carrinho_id} AND usuario_id = ${usuario_id}`, (err, res) => {
+        sql.query(`SELECT qrcode_id FROM qrcodes WHERE carrinho_id = ? AND usuario_id = ?`, [carrinho_id, usuario_id], (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 reject(err);
