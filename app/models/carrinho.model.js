@@ -125,7 +125,6 @@ const expirarCarrinhosJaPendentesDoUsuario = (usuarioId) => {
 Carrinho.create = async (newCarrinho, result) => {
     try {
         console.log('Iniciando criação do carrinho com dados:', newCarrinho);
-
         const { carrinho_lotes } = newCarrinho;
         const usuarioId = newCarrinho.usuarioId;
         console.log('Dados extraídos: carrinho_lotes e usuarioId', carrinho_lotes, usuarioId);

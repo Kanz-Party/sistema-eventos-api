@@ -82,10 +82,7 @@ Pdf.generate = async (ingressos) => {
 
     try {
         const pdfPaths = [];
-        let i = 0;
         for (const ingresso of ingressos) {
-            i++;
-            if(i>2) break;
             const pdfPath = await generatePdf(ingresso);
             pdfPaths.push(pdfPath);
         }

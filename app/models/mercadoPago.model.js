@@ -7,7 +7,7 @@ const QrCode = require("./qrcode.model.js");
 const { verificarSessao } = require("../middlewares/Auth.js");
 
 
-const accessToken = 'APP_USR-4998860730644430-011016-9ef57c284e2b4873242bd5794e46f4bd-511688906';
+const accessToken = 'APP_USR-7617401898799737-013119-e2dece07bf195ced26078839c4f55746-1661485047';
 const client = new MercadoPagoConfig({ accessToken });
 const notificationUrl = 'https://kanzparty.com.br/api/mercadoPago/receive'
 const statusPagamento = {
@@ -97,7 +97,7 @@ function insertPagamento(pagamento) {
 
 function getPagamentoByCarrinhoAndUsuario(carrinho_id, usuario_id) {
     return new Promise((resolve, reject) => {
-        sql.query(`SELECT pagamento_preference_id, pagamento_id FROM pagamentos WHERE carrinho_id = ? AND usuario_id = ?`, [carrinho_id, usuario_id], (err, res) => {
+        sql.query(`SELECT pagamento_preference_id, pagamento_id FROM pagamentos WHERE carrinho_id = ? AND usuario_id = ? ORDER BY pagamento_id DESC LIMIT 1`, [carrinho_id, usuario_id], (err, res) => {
             if (err) {
                 reject(err);
                 return;
@@ -188,18 +188,18 @@ MercadoPago.createPayment = async (body, result) => {
                     zip_code: usuario.usuario_cep
                 }
             },
-            payment_methods: {
-                excluded_payment_methods: [
-                    { id: "bolbradesco" },
-                    { id: "pec" }
-                ],
-                excluded_payment_types: [
-                    { id: "credit_card" },
-                    { id: "debit_card" }
-                ],
-                installments: 1
-            },
-            notification_url: `${notificationUrl}/${body.carrinho_id}/${body.usuario_id}?source_news=webhooks`,
+            // payment_methods: {
+            //     excluded_payment_methods: [
+            //         { id: "bolbradesco" },
+            //         { id: "pec" }
+            //     ],
+            //     excluded_payment_types: [
+            //         { id: "credit_card" },
+            //         { id: "debit_card" }
+            //     ],
+            //     installments: 1
+            // },
+            notification_url: `${notificationUrl}/${body.carrinho_id}/${usuario.usuario_id}?source_news=webhooks`,
             statement_descriptor: 'Kanz Party',
             expires: true,
             expiration_date_from: dateFrom.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
@@ -208,7 +208,7 @@ MercadoPago.createPayment = async (body, result) => {
         };
 
         const preference = new Preference(client);
-        const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuarioId);
+        const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, usuario.usuario_id);
 
         if (pagamentoExistente) {
             response = await preference.update({
@@ -280,11 +280,12 @@ function getExistantQrCodes(carrinho_id, usuario_id) {
 
 
 MercadoPago.receivePayment = async (body, result) => {
-    console.log(body)
     if (!body || !body.data || !body.data.id || !body.carrinho_id || !body.usuario_id) {    
         result({ message: "id do pagamento não informado" }, null);
         return;
     }
+
+    console.log("body", body)
 
     const payment = new Payment(client);
     let pagamentoMercadoPago = {};
@@ -302,7 +303,10 @@ MercadoPago.receivePayment = async (body, result) => {
         return;
     }
 
-    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuarioId);
+    console.log("pagamentoMercadoPago", pagamentoMercadoPago)
+
+    const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, body.usuario_id);
+    console.log("pagamentoExistente", pagamentoExistente)
     if (!pagamentoExistente) {
         result({ message: "pagamento não encontrado" }, null);
         return;
@@ -314,6 +318,8 @@ MercadoPago.receivePayment = async (body, result) => {
         pagamento_status: statusPagamento[pagamentoMercadoPago.status],
         pagamento_mercadopago_id: pagamentoMercadoPago.id,
     }
+
+    console.log("newPagamento", newPagamento)
     
     if(newPagamento.pagamento_status === 1) {
         //atualizar preferencia para expirar

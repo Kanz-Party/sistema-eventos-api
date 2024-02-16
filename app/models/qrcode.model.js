@@ -64,8 +64,6 @@ function sendEmails(qrcodes) {
         const usuario_nome = qrcodes[0].usuario_nome;
         const usuario_email = qrcodes[0].usuario_email;
 
-        return resolve();
-
         let transporter = nodemailer.createTransport({
             host: 'smtp-vip.kinghost.net.',
             auth: {
