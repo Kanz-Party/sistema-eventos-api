@@ -8,6 +8,8 @@ const Usuario = function (usuario) {
     this.usuario_nome = usuario.nome;
     this.usuario_cpf = usuario.cpf;
     this.usuario_email = usuario.email;
+    this.usuario_cep = usuario.cep;
+    this.usuario_endereco = usuario.endereco;
     this.usuario_telefone = usuario.telefone;
     if (usuario.senha) {
         this.usuario_senha = bcrypt.hashSync(usuario.senha, saltRounds); // Criptografando a senha
@@ -119,7 +121,79 @@ Usuario.createWithLogin = (newUsuario, result) => {
 };
 
 
+Usuario.update = (id, usuarioData, result) => {
+    console.log('dataaaaaa', usuarioData);
+    // Primeiro, verifica se o e-mail já existe e pertence a outro usuário
+    sql.query("SELECT * FROM usuarios WHERE usuario_email = ? AND usuario_id != ?", [usuarioData.usuario_email, id], (err, res) => {
+        if (err) {
+            console.log("error: ", err);
+            result(err, null);
+            return;
+        }
 
+        if (res.length > 0) {
+            console.log("E-mail já cadastrado por outro usuário");
+            result({ kind: "email_existente" }, null);
+            return;
+        }
+
+        // Depois, verifica se o CPF já existe e pertence a outro usuário
+        sql.query("SELECT * FROM usuarios WHERE usuario_cpf = ? AND usuario_id != ?", [usuarioData.usuario_cpf, id], (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                result(err, null);
+                return;
+            }
+
+            if (res.length > 0) {
+                console.log("CPF já cadastrado por outro usuário");
+                result({ kind: "cpf_existente" }, null);
+                return;
+            }
+
+            // Verifica se uma nova senha foi fornecida
+            if (usuarioData.senha) {
+                bcrypt.hash(usuarioData.senha, saltRounds, (err, hash) => {
+                    if (err) {
+                        console.log("error: ", err);
+                        result(err, null);
+                        return;
+                    }
+
+                    // Atualiza a senha com a versão criptografada
+                    usuarioData.senha = hash;
+
+                    // Agora, atualiza o usuário no banco de dados
+                    sql.query("UPDATE usuarios SET ? WHERE usuario_id = ?", [usuarioData, id], (err, res) => {
+                        if (err) {
+                            console.log("error: ", err);
+                            result(err, null);
+                            return;
+                        }
+
+                        console.log("updated usuario: ", { id: id, ...usuarioData });
+                        result(null, { id: id, ...usuarioData });
+                    });
+                });
+            } else {
+                // Se nenhuma senha for fornecida, remove a propriedade senha do objeto usuarioData
+                const { senha, ...usuarioDataSemSenha } = usuarioData;
+
+                // Atualiza os outros dados do usuário
+                sql.query("UPDATE usuarios SET ? WHERE usuario_id = ?", [usuarioDataSemSenha, id], (err, res) => {
+                    if (err) {
+                        console.log("error: ", err);
+                        result(err, null);
+                        return;
+                    }
+
+                    console.log("updated usuario: ", { id: id, ...usuarioDataSemSenha });
+                    result(null, { id: id, ...usuarioDataSemSenha });
+                });
+            }
+        });
+    });
+};
 
 
 Usuario.findById = (id, result) => {

@@ -51,6 +51,7 @@ exports.createWithLogin = (req, res) => {
     nome: req.body.nome,
     cpf: req.body.cpf,
     email: req.body.email,
+    endereco: req.body.endereco,
     telefone: req.body.telefone,
     senha: req.body.senha
   });
@@ -109,23 +110,19 @@ exports.update = (req, res) => {
     });
   }
 
-  Usuario.updateById(
-    req.params.id,
-    new Usuario(req.body),
-    (err, data) => {
-      if (err) {
-        if (err.kind === "not_found") {
-          res.status(404).send({
-            message: `Not found Usuario with id ${req.params.id}.`
-          });
-        } else {
-          res.status(500).send({
-            message: "Error updating Usuario with id " + req.params.id
-          });
-        }
-      } else res.send(data);
-    }
-  );
+  Usuario.update(req.params.id, new Usuario(req.body), (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({
+          message: `Not found Usuario with id ${req.params.id}.`
+        });
+      } else {
+        res.status(500).send({
+          message: "Error updating Usuario with id " + req.params.id
+        });
+      }
+    } else res.send(data);
+  });
 };
 
 // Delete a Usuario with the specified id in the request
