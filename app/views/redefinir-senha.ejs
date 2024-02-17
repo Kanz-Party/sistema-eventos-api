@@ -65,7 +65,7 @@
 <body>
     <div class="container">
         <h1>Redefinir Senha</h1>
-        <form id="formRedefinirSenha" action="/usuarios/redefinir_senha" method="POST">
+        <form id="formRedefinirSenha" action="/api/usuarios/redefinir_senha" method="POST">
             <input type="hidden" name="token" value="<%= token %>">
             <input type="password" name="novaSenha" placeholder="Nova Senha" minlength="6" required>
             <button type="submit">Redefinir Senha</button>

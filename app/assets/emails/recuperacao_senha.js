@@ -15,11 +15,8 @@ exports.generateRecoveryEmail = (dadosRecuperacao) => {
                 <table style=${styles.table}>
                     <tr>
                         <td colspan="3" style=${styles.title}>
-                            <img src=${logo} alt="KANZ" style=${styles.image} />
                             <h3>
-                                Olá, <span style=${styles.nome}>${nomeUsuario}</span>.
-                                <br />
-                                Você solicitou a redefinição de senha.
+                                Olá, você solicitou a redefinição de senha.
                             </h3>
                         </td>
                     </tr>

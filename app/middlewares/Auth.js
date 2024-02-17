@@ -19,7 +19,7 @@ const verificarSessao = (req, res, next) => {
     if (err) {
       return res.status(401).send({ message: "Não autorizado!" });
     }
-    req.usuarioId = decoded.id;
+    req.usuario_id = decoded.id;
     next();
   });
 };
@@ -37,11 +37,11 @@ const verificarToken = (req, res, next) => {
     if (err) {
       return res.json({ estaLogado: false });
     } else {
-      const usuarioId = decodedToken.id;
+      const usuario_id = decodedToken.id;
       return res.json({
         estaLogado: true,
         usuario: {
-          usuarioId: usuarioId,
+          usuario_id: usuario_id,
           nome: decodedToken.nome,
           email: decodedToken.email
         }

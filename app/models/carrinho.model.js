@@ -34,14 +34,26 @@ Carrinho.findByHash = async (carrinho_hash, result) => {
 
         carrinho.carrinho_expiracao = moment(carrinho.carrinho_expiracao).format('YYYY-MM-DD HH:mm:ss');
 
-        const carrinhoLotes = await getCarrinhoLotes(carrinho.carrinho_id);
+        const [carrinhoLotes, pagamento] = await Promise.all([
+            getCarrinhoLotes(carrinho.carrinho_id),
+            getPagamento(carrinho.carrinho_id)
+        ]);
 
-        result(null, { ...carrinho, carrinho_lotes: carrinhoLotes });
+        result(null, { ...carrinho, carrinho_lotes: carrinhoLotes, pagamento: pagamento });
     } catch (err) {
         console.error("error: ", err);
         result(err, null);
     }
 }
+
+const getPagamento = (carrinho_id) => {
+    return new Promise((resolve, reject) => {
+        sql.query("SELECT * FROM pagamentos WHERE carrinho_id = ?", [carrinho_id], (err, res) => {
+            if (err) return reject(err);
+            resolve(res[0]);
+        });
+    });
+};
 
 const getCarrinhoByHash = (carrinho_hash) => {
     return new Promise((resolve, reject) => {
@@ -62,12 +74,15 @@ const getCarrinhoLotes = (carrinho_id) => {
 };
 
 Carrinho.getMeusIngressos = (req, result) => {
-    const usuarioId = req.usuarioId;
+    const usuario_id = req.usuario_id;
 
-    sql.query(`SELECT carrinho_id FROM pagamentos WHERE usuario_id = ?`, [usuarioId], (err, res) => {
+    sql.query(`SELECT carrinho_id FROM pagamentos WHERE usuario_id = ?`, [usuario_id], (err, res) => {
         if (err) {
             console.log("error: ", err);
-            result(err, null);
+            result({
+                err: 'ERRO_INTERNO',
+                message: err
+            });
             return;
         }
         if (res.length) {
@@ -84,52 +99,98 @@ Carrinho.getMeusIngressos = (req, result) => {
                 FORMAT(ROUND(cl.lote_preco / 100, 2), 2) AS lote_preco,
                 p.*,
                 qr.qrcode_id
-              FROM
+            FROM
                 carrinhos c
                 JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
                 JOIN lotes l ON l.lote_id = cl.lote_id
-                JOIN ingressos i ON i.ingresso_id = l.lote_id
-                LEFT JOIN pagamentos p ON p.carrinho_id = c.carrinho_id
+                JOIN ingressos i ON i.ingresso_id = l.ingresso_id
+                JOIN pagamentos p ON p.carrinho_id = c.carrinho_id
                 LEFT JOIN qrcodes qr ON qr.carrinho_id = c.carrinho_id
-              WHERE c.carrinho_id IN (?) AND (p.pagamento_expiracao  > NOW() OR p.pagamento_status = 1 )
+            WHERE c.carrinho_id IN (?) AND ((p.pagamento_expiracao > NOW() AND p.pagamento_status = 0) OR p.pagamento_status = 1 )
             
               `, [carrinhos_id], (err, res) => {
                 if (err) {
                     console.log("error: ", err);
-                    result(err, null);
+                    result({
+                        err: 'ERRO_INTERNO',
+                        message: err
+                    });
                     return;
                 }
                 if (res.length) {
                     result(null, res);
                 } else {
-                    result({ kind: "not_found" }, null);
+                    result(null, []);
                 }
             }
             );
         } else {
-            result({ kind: "not_found" }, null);
+            result(null, []);
         }
     });
 };
 
-const expirarCarrinhosJaPendentesDoUsuario = (usuarioId) => {
+const expirarCarrinhosJaPendentesDoUsuario = (usuario_id) => {
     return new Promise((resolve, reject) => {
         const dataExpiracao = moment().format('YYYY-MM-DD HH:mm:ss');
-        sql.query("UPDATE carrinhos SET carrinho_expiracao = ? WHERE carrinho_id IN (SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0)", [dataExpiracao, usuarioId], (err, res) => {
+        sql.query("UPDATE carrinhos SET carrinho_expiracao = ? WHERE carrinho_id IN (SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0)", [dataExpiracao, usuario_id], (err, res) => {
             if (err) return reject(err);
             resolve(res);
         });
     });
 }
 
+function getIngressos(carrinho_id) {
+    return new Promise((resolve, reject) => {
+        sql.query(`SELECT
+            c.carrinho_id,
+            i.ingresso_id,
+            i.ingresso_descricao,
+            l.lote_id,
+            l.lote_descricao,
+            cl.lote_quantidade,
+            FORMAT(ROUND(cl.lote_preco / 100, 2), 2) as lote_preco FROM
+            carrinhos c 
+            JOIN carrinhos_lotes cl on c.carrinho_id = cl.carrinho_id
+            JOIN lotes l on cl.lote_id = l.lote_id
+            JOIN ingressos i on l.ingresso_id = i.ingresso_id
+            WHERE c.carrinho_id = ?`, [carrinho_id], (err, res) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            if (res.length) {
+                resolve(res);
+                return;
+            }
+            reject({ kind: "Ingressos não encontrados" });
+        });
+    });
+}
+
 Carrinho.create = async (newCarrinho, result) => {
     try {
+        if(!newCarrinho.usuario_id) return result({err: 'USUARIO_NAO_INFORMADO', message: 'Usuário não informado'});
+        if(!newCarrinho.carrinho_lotes || newCarrinho.carrinho_lotes.length === 0) return result({err: 'LOTES_NAO_INFORMADOS', message: 'Lotes não informados'});
+
         console.log('Iniciando criação do carrinho com dados:', newCarrinho);
         const { carrinho_lotes } = newCarrinho;
-        const usuarioId = newCarrinho.usuarioId;
-        console.log('Dados extraídos: carrinho_lotes e usuarioId', carrinho_lotes, usuarioId);
+        const usuario_id = newCarrinho.usuario_id;
+        console.log('Dados extraídos: carrinho_lotes e usuario_id', carrinho_lotes, usuario_id);
 
-        delete newCarrinho.usuarioId;
+        console.log('Expirando carrinhos já pendentes do usuário...', usuario_id)
+        try {   
+            await expirarCarrinhosJaPendentesDoUsuario(usuario_id);
+            await MercadoPago.removerPagamentosPendentesDoUsuario(usuario_id);
+        } catch (error) {
+            console.error('Erro ao expirar carrinhos pendentes do usuário:', error);
+            result({
+                err: 'ERRO_INTERNO',
+                message: 'Erro ao expirar carrinhos pendentes do usuário'
+            });
+        }
+
+        delete newCarrinho.usuario_id;
         delete newCarrinho.carrinho_lotes;
         console.log('Dados de usuário e lotes removidos do newCarrinho', newCarrinho);
 
@@ -184,18 +245,19 @@ Carrinho.create = async (newCarrinho, result) => {
         }
 
         console.log('Inserindo carrinho...');
-        const carrinho_id = await insertCarrinho(newCarrinho);
+        const { carrinho_id, carrinho_hash } = await insertCarrinho(newCarrinho);
         console.log('Carrinho inserido com ID:', carrinho_id);
 
         console.log('Inserindo lotes no carrinho...');
-        await insertCarrinhoLotes(carrinho_id, carrinhos_lotes_insert);
-        console.log('Lotes inseridos no carrinho:', carrinhos_lotes_insert);
+        await insertCarrinhoLotes(carrinho_id, carrinhos_lotes_insert)
+        const ingressos = await getIngressos(carrinho_id);
+        console.log('Ingressos obtidos:', ingressos);
+
 
         console.log('Criando pagamento no MercadoPago...');
-        MercadoPago.createPayment({ carrinho_id, usuarioId }, result);
-    
-    
-
+        console.log('carrinho_id:', carrinho_id);
+        console.log('usuario_id:', usuario_id);
+        MercadoPago.createPayment({ carrinho_id, carrinho_hash, usuario_id, ingressos }, result);    
     } catch (err) {
         console.error("error: ", err);
         result(err, null);
@@ -207,7 +269,7 @@ const insertCarrinho = (carrinho) => {
     return new Promise((resolve, reject) => {
         sql.query("INSERT INTO carrinhos SET ?", carrinho, (err, res) => {
             if (err) return reject(err);
-            resolve(res.insertId);
+            resolve({ carrinho_id: res.insertId, ...carrinho });
         });
     });
 };
@@ -221,6 +283,16 @@ const getLotesDb = (carrinho_lotes) => {
     });
 };
 
+const updateLoteQuantidade = (carrinho_lote) => {
+    return new Promise((resolve, reject) => {
+        sql.query("UPDATE lotes SET lote_quantidade = lote_quantidade - ? WHERE lote_id = ?", [carrinho_lote.lote_quantidade, carrinho_lote.lote_id], (err, res) => {
+            if (err) return reject(err);
+            resolve(res);
+        });
+    });
+
+}
+
 const insertCarrinhoLotes = (carrinho_id, carrinhos_lotes_insert) => {
     return new Promise((resolve, reject) => {
         const data = carrinhos_lotes_insert.map(carrinho_lote => [
@@ -232,11 +304,10 @@ const insertCarrinhoLotes = (carrinho_id, carrinhos_lotes_insert) => {
 
         sql.query("INSERT INTO carrinhos_lotes (carrinho_id, lote_id, lote_preco, lote_quantidade) VALUES ?", [data], (err, res) => {
             if (err) return reject(err);
-            resolve(res);
         });
 
         const updates = carrinhos_lotes_insert.map(carrinho_lote =>
-            sql.query("UPDATE lotes SET lote_quantidade = lote_quantidade - ? WHERE lote_id = ?", [carrinho_lote.lote_quantidade, carrinho_lote.lote_id])
+            updateLoteQuantidade(carrinho_lote)
         );
 
         Promise.all(updates)

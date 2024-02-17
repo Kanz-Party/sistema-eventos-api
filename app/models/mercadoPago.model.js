@@ -26,34 +26,6 @@ const statusPagamento = {
 const MercadoPago = function (empresa_id) {
 };
 
-function getIngressos(carrinho_id) {
-    return new Promise((resolve, reject) => {
-        sql.query(`SELECT
-            c.carrinho_id,
-            i.ingresso_id,
-            i.ingresso_descricao,
-            l.lote_id,
-            l.lote_descricao,
-            cl.lote_quantidade,
-            FORMAT(ROUND(cl.lote_preco / 100, 2), 2) as lote_preco FROM
-            carrinhos c 
-            LEFT JOIN carrinhos_lotes cl on c.carrinho_id = cl.carrinho_id
-            LEFT JOIN lotes l USING (lote_id)
-            LEFT JOIN ingressos i USING (ingresso_id)
-            WHERE c.carrinho_id = ?`, [carrinho_id], (err, res) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            if (res.length) {
-                resolve(res);
-                return;
-            }
-            reject({ kind: "not_found" });
-        });
-    });
-}
-
 function getUsuario(usuario_id) {
     return new Promise((resolve, reject) => {
         sql.query(`SELECT 
@@ -111,7 +83,7 @@ function getPagamentoByCarrinhoAndUsuario(carrinho_id, usuario_id) {
     });
 }
 
-function updatePreference(preference_id) {
+function updatePreferenceToExpire(preference_id) {
     return new Promise(async (resolve, reject) => {
         const preference = new Preference(client);
         let newExpirationDate = moment()
@@ -154,9 +126,11 @@ MercadoPago.createPayment = async (body, result) => {
 
     try {
 
-        const ingressos = await getIngressos(body.carrinho_id);
-
-        const usuario = await getUsuario(body.usuarioId);
+        const ingressos = body.ingressos;
+        console.log("pegando usuario", body.usuario_id)
+        const usuario = await getUsuario(body.usuario_id);
+        console.log("ingressos", ingressos)
+        console.log("usuario", usuario)
 
         preferenceBody = {
             items: ingressos.map(ingresso => {
@@ -206,19 +180,25 @@ MercadoPago.createPayment = async (body, result) => {
             expiration_date_to: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
             date_of_expiration: expirationDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ')
         };
+        console.log("preferenceBody", preferenceBody)
 
         const preference = new Preference(client);
         const pagamentoExistente = await getPagamentoByCarrinhoAndUsuario(body.carrinho_id, usuario.usuario_id);
 
-        if (pagamentoExistente) {
-            response = await preference.update({
-                id: pagamentoExistente.pagamento_preference_id,
-                updatePreferenceRequest: preferenceBody
-            });
-        } else {
-            response = await preference.create({
-                body: preferenceBody
-            });
+        try {
+            if (pagamentoExistente) {
+                response = await preference.update({
+                    id: pagamentoExistente.pagamento_preference_id,
+                    updatePreferenceRequest: preferenceBody
+                });
+            } else {
+                response = await preference.create({
+                    body: preferenceBody
+                });
+            }
+        } catch (error) {
+            console.error("Error in createPayment or Update:", error);
+            throw new Error("Erro ao criar ou atualizar a preferência de pagamento no MercadoPago");
         }
 
         if (!response.init_point || !response.id) {
@@ -228,7 +208,7 @@ MercadoPago.createPayment = async (body, result) => {
         const pagamento = {
             pagamento_id: pagamentoExistente.pagamento_id ? pagamentoExistente.pagamento_id : null,
             carrinho_id: body.carrinho_id,
-            usuario_id: body.usuarioId,
+            usuario_id: body.usuario_id,
             pagamento_status: 0,
             pagamento_checkout_url: response.init_point,
             pagamento_preference_id: response.id,
@@ -242,6 +222,7 @@ MercadoPago.createPayment = async (body, result) => {
         } else {
             response = {
                 ...response,
+                carrinho_hash: body.carrinho_hash,
                 pagamento: {
                     pagamento_id: pagamentoResponse.pagamento_id,
                     pagamento_expiracao: pagamentoResponse.pagamento_expiracao,
@@ -274,8 +255,58 @@ function getExistantQrCodes(carrinho_id, usuario_id) {
             reject({ kind: "not_found" });
         });
     });
-
 }
+
+const cancelarPagamentosPendentesDoUsuario = (preferences_ids) => {
+    return new Promise((resolve, reject) => {
+        sql.query(`UPDATE pagamentos SET pagamento_status = -1, pagamento_expiracao = NOW() WHERE pagamento_preference_id IN (?)`, [preferences_ids], (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            resolve(res);
+        });
+    });
+};
+
+MercadoPago.removerPagamentosPendentesDoUsuario = (usuario_id) => {
+    return new Promise((resolve, reject) => {
+        sql.query("SELECT pagamento_preference_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0", [usuario_id], async (err, res) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            let preferences_ids = [];
+            if (res.length) {
+                for(pagamento of res) {
+                    const preference = new Preference(client);
+                    try{
+                        const preferenceRes = await preference.get({preferenceId: pagamento.pagamento_preference_id})
+                        if(preferenceRes.id) {
+                            await preference.update({
+                                id: pagamento.pagamento_preference_id,
+                                updatePreferenceRequest: {
+                                    expires: true,
+                                    expiration_date_from: moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+                                    expiration_date_to: moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ')
+                                }
+                            })
+                        }
+                    } catch (error) {
+                        console.log("error: ", error);
+                        reject(error);
+                    }
+                    preferences_ids.push(pagamento.pagamento_preference_id);
+                }
+                const resCancelar = cancelarPagamentosPendentesDoUsuario(preferences_ids);
+                resolve(resCancelar);
+            } else {
+                resolve({ kind: "not_found" });
+            }
+        });
+    });
+};
 
 
 
@@ -323,7 +354,7 @@ MercadoPago.receivePayment = async (body, result) => {
     
     if(newPagamento.pagamento_status === 1) {
         //atualizar preferencia para expirar
-        updatePreference(pagamentoExistente.pagamento_preference_id);
+        updatePreferenceToExpire(pagamentoExistente.pagamento_preference_id);
         
         //gerar qrcodes
         let qrCodes = [];
@@ -337,6 +368,7 @@ MercadoPago.receivePayment = async (body, result) => {
             result(null, qrCodes);
             return;
         } else {
+            //criar qrcodes e enviar para o email etc
             QrCode.create(body, (err, res) => {
                 if (err) {
                     result(err, null);
@@ -352,9 +384,6 @@ MercadoPago.receivePayment = async (body, result) => {
         result({ kind: "erro ao inserir pagamento" }, null);
         return;
     }    
-
-    
-
 };
 
 

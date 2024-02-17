@@ -2,7 +2,7 @@ const Usuario = require("../models/usuario.model.js");
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const jwt = require('jsonwebtoken');
-const getUsuarioId = require("../middlewares/Auth.js");
+const getusuario_id = require("../middlewares/Auth.js");
 require('dotenv').config();
 
 
@@ -207,16 +207,16 @@ exports.login = (req, res) => {
 
 
 exports.findOneById = (req, res) => {
-  getUsuarioId(req, res, () => {
-    Usuario.findById(req.usuarioId, (err, data) => {
+  getusuario_id(req, res, () => {
+    Usuario.findById(req.usuario_id, (err, data) => {
       if (err) {
         if (err.kind === "not_found") {
           res.status(404).send({
-            message: `Not found Usuario with id ${req.usuarioId}.`
+            message: `Not found Usuario with id ${req.usuario_id}.`
           });
         } else {
           res.status(500).send({
-            message: "Error retrieving Usuario with id " + req.usuarioId
+            message: "Error retrieving Usuario with id " + req.usuario_id
           });
         }
       } else res.send(data);

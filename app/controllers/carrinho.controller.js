@@ -19,17 +19,17 @@ exports.create = (req, res) => {
 
     token = token.slice(7, token.length);
 
-    let usuarioId = false;
+    let usuario_id = false;
 
     jwt.verify(token, process.env.JWT_SECRET, (err, decodedToken) => {
         if (err) {
-            usuarioId = false;
+            usuario_id = false;
         } else {
-            usuarioId = decodedToken.id;
+            usuario_id = decodedToken.id;
         }
     })
 
-    req.body.usuarioId = usuarioId;
+    req.body.usuario_id = usuario_id;
 
     Carrinho.create(req.body, (err, data) => {
         if (err)
@@ -60,21 +60,21 @@ exports.getMeusIngressos = (req, res) => {
             });
         }
 
-        // If verification is successful, extract usuarioId from decodedToken
-        const usuarioId = decodedToken.id;
+        // If verification is successful, extract usuario_id from decodedToken
+        const usuario_id = decodedToken.id;
 
-        if (!usuarioId) {
-            // If usuarioId is not found after decoding, it means something went wrong with token decoding
+        if (!usuario_id) {
+            // If usuario_id is not found after decoding, it means something went wrong with token decoding
             return res.status(401).send({
                 err: 'USUARIO_NAO_AUTORIZADO',
                 message: "Usuário não autorizado."
             });
         }
 
-        // Adjust the request object or create a new object to pass usuarioId to Carrinho.getMeusIngressos
-        // This approach depends on how Carrinho.getMeusIngressos expects to receive usuarioId
-        // Assuming it expects usuarioId as part of the request, for example:
-        req.usuarioId = usuarioId;
+        // Adjust the request object or create a new object to pass usuario_id to Carrinho.getMeusIngressos
+        // This approach depends on how Carrinho.getMeusIngressos expects to receive usuario_id
+        // Assuming it expects usuario_id as part of the request, for example:
+        req.usuario_id = usuario_id;
 
         // Now call Carrinho.getMeusIngressos with the modified request
         Carrinho.getMeusIngressos(req, (err, data) => {

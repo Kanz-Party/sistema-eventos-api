@@ -242,11 +242,13 @@ Usuario.redefinirSenha = (token, novaSenha, callback) => {
         // Aqui, você precisaria implementar a criptografia da nova senha
         const senhaCriptografada = bcrypt.hashSync(novaSenha, saltRounds);
 
+        console.log("new password: ", senhaCriptografada)
+
 
 
         // Continuação da lógica para atualizar a senha e marcar o token como utilizado
 
-        sql.query('UPDATE usuarios SET usuario_senha = ? WHERE usuario_id = ?', [senhaCriptografada, tokenData.userId], (err, resultado) => {
+        sql.query('UPDATE usuarios SET usuario_senha = ? WHERE usuario_id = ?', [senhaCriptografada, tokenData.usuario_id], (err, resultado) => {
             if (err) {
                 callback(err, null);
                 return;
@@ -309,7 +311,7 @@ Usuario.redefinirSenhaToken = (email, callback) => {
 
                 // Continuação da lógica para enviar o e-mail com o token
 
-                sendEmails(usuario.usuario_nome, usuario.usuario_email, token, 'http://kanzparty.com.br')
+                sendEmails(usuario.usuario_nome, usuario.usuario_email, token, 'https://kanzparty.com.br/api')
 
 
 
