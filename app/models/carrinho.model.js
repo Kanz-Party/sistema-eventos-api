@@ -91,7 +91,7 @@ Carrinho.getMeusIngressos = (req, result) => {
                 JOIN ingressos i ON i.ingresso_id = l.lote_id
                 LEFT JOIN pagamentos p ON p.carrinho_id = c.carrinho_id
                 LEFT JOIN qrcodes qr ON qr.carrinho_id = c.carrinho_id
-              WHERE c.carrinho_id IN (?) AND (p.pagamento_expiracao  > NOW() OR p.pagamento_status = 1 OR p.pagamento_status = -1)
+              WHERE c.carrinho_id IN (?) AND (p.pagamento_expiracao  > NOW() OR p.pagamento_status = 1 )
             
               `, [carrinhos_id], (err, res) => {
                 if (err) {
