@@ -309,7 +309,7 @@ Usuario.redefinirSenhaToken = (email, callback) => {
 
                 // Continuação da lógica para enviar o e-mail com o token
 
-                sendEmails(usuario.usuario_nome, usuario.usuario_email, token, 'http://localhost:21021')
+                sendEmails(usuario.usuario_nome, usuario.usuario_email, token, 'http://kanzparty.com.br')
 
 
 
