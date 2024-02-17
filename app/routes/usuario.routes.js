@@ -20,6 +20,10 @@ module.exports = app => {
   // Retrieve a single Usuario with id
   router.get("/:id", usuarios.findOne);
 
+  router.post("/redefinir_senha", usuarios.redefinirSenha);
+
+  router.post("/redefinir_senha_token", usuarios.redefinirSenhaToken);
+
   // Update a Usuario with id
   router.put("/:id", usuarios.update);
 

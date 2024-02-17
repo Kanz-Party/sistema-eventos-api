@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Redefinir Senha</title>
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+            /* Cor de fundo leve */
+        }
+
+        .container {
+            width: 100%;
+            /* Pode ajustar para menos, como 80% se preferir */
+            max-width: 400px;
+            /* Uma largura máxima para o container */
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            /* Sombra leve para destacar */
+            border-radius: 5px;
+            /* Bordas levemente arredondadas */
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            /* Espaçamento entre os campos do formulário */
+        }
+
+        input,
+        button {
+            padding: 10px;
+            border-radius: 5px;
+            /* Bordas arredondadas para inputs e botão */
+            border: 1px solid #ccc;
+            /* Borda sutil */
+        }
+
+        button {
+            background-color: #f0ce8c;
+            /* Cor de fundo para o botão */
+            color: black;
+            /* Texto branco para o botão */
+            cursor: pointer;
+            /* Cursor de mãozinha ao passar sobre o botão */
+        }
+
+        button:hover {
+            opacity: 0.9;
+            /* Efeito leve ao passar o mouse */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Redefinir Senha</h1>
+        <form id="formRedefinirSenha" action="/usuarios/redefinir_senha" method="POST">
+            <input type="hidden" name="token" value="<%= token %>">
+            <input type="password" name="novaSenha" placeholder="Nova Senha" minlength="6" required>
+            <button type="submit">Redefinir Senha</button>
+        </form>
+        <!-- Elemento para mostrar mensagens ao usuário -->
+        <div id="mensagemResposta"></div>
+    </div>
+</body>
+<script>
+    document.getElementById('formRedefinirSenha').onsubmit = async function(e) {
+        e.preventDefault(); // Previne o envio normal do formulário
+    
+        // Construir um objeto com os valores do formulário
+        const formData = {
+            token: document.getElementsByName('token')[0].value,
+            novaSenha: document.getElementsByName('novaSenha')[0].value,
+        };
+    
+        try {
+            // Faz a solicitação POST com fetch, enviando JSON
+            const response = await fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData), // Converte os dados do formulário para JSON
+            });
+    
+            const data = await response.json(); // Supondo que o servidor responda com JSON
+    
+            if (response.ok) {
+                // Se a resposta for ok, mostra um swal de sucesso
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: 'Senha redefinida com sucesso.',
+                    icon: 'success',
+                    confirmButtonText: 'Ok'
+                });
+            } else {
+                // Se houver um erro, mostra um swal de erro
+                Swal.fire({
+                    title: 'Erro!',
+                    text: data.message || 'Erro ao redefinir a senha.',
+                    icon: 'error',
+                    confirmButtonText: 'Ok'
+                });
+            }
+        } catch (error) {
+            // Tratamento de erro de rede ou parsing
+            Swal.fire({
+                title: 'Erro!',
+                text: 'Não foi possível processar a solicitação.',
+                icon: 'error',
+                confirmButtonText: 'Ok'
+            });
+        }
+    };
+    </script>
+    
+
+
+</html>

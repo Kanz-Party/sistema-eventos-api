@@ -8,6 +8,8 @@ require('dotenv').config();
 
 const app = express();
 
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'app', 'views'));
 var corsOptions = {
   origin: "*"
 };
@@ -27,6 +29,16 @@ require("./app/routes/mercadoPago.routes.js")(app);
 require("./app/routes/ingresso.routes.js")(app);
 require("./app/routes/carrinho.routes.js")(app);
 require("./app/routes/qrcodes.routes.js")(app);
+
+app.get('/redefinir-senha', (req, res) => {
+  // O token seria normalmente extraído da query string ou de um parâmetro de rota
+  const token = req.query.token;
+  
+  // Certifique-se de validar o token aqui antes de prosseguir
+
+  // Renderiza a página de redefinição de senha com o token
+  res.render('redefinir-senha', { token });
+});
 
 // Rotas protegidas que exigem autenticação
 

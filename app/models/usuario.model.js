@@ -1,8 +1,9 @@
 const sql = require("./db.js");
 const bcrypt = require('bcrypt');
 const saltRounds = 10; // Você pode ajustar isso conforme necessário
-const login = require("./login.js");
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const recuperacao_senha_email = require("../assets/emails/recuperacao_senha.js");
 
 const Usuario = function (usuario) {
     this.usuario_nome = usuario.nome;
@@ -214,6 +215,148 @@ Usuario.findById = (id, result) => {
         result({ kind: "not_found" }, null);
     });
 };
+
+Usuario.redefinirSenha = (token, novaSenha, callback) => {
+    // Sua lógica de busca do token e atualização da senha
+    sql.query('SELECT * FROM tokens_recuperacao WHERE token = ?', [token], (err, resultado) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+
+        if (resultado.length === 0) {
+            callback('Token inválido ou expirado', null);
+            return;
+        }
+
+        const tokenData = resultado[0];
+
+        console.log('tokenData', tokenData)
+     
+        
+        if (tokenData.expirationDate < new Date() || tokenData.isUsed) {
+            callback('Token inválido ou expirado', null);
+            return;
+        }
+
+        // Aqui, você precisaria implementar a criptografia da nova senha
+        const senhaCriptografada = bcrypt.hashSync(novaSenha, saltRounds);
+
+
+
+        // Continuação da lógica para atualizar a senha e marcar o token como utilizado
+
+        sql.query('UPDATE usuarios SET usuario_senha = ? WHERE usuario_id = ?', [senhaCriptografada, tokenData.userId], (err, resultado) => {
+            if (err) {
+                callback(err, null);
+                return;
+            }
+
+            sql.query('UPDATE tokens_recuperacao SET isUsed = 1 WHERE token = ?',
+
+                [token], (err, resultado) => {
+                    if (err) {
+                        callback(err, null);
+                        return;
+                    }
+
+                    callback(null, 'Senha atualizada com sucesso');
+                });
+        });
+    });
+};
+
+Usuario.redefinirSenhaToken = (email, callback) => {
+    // Sua lógica de busca do usuário e geração do token
+    sql.query('SELECT * FROM usuarios WHERE usuario_email = ?', [email], (err, resultado) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+
+        if (resultado.length === 0) {
+            callback('E-mail não cadastrado', null);
+            return;
+        }
+
+        const usuario = resultado[0];
+
+        // Aqui, você precisaria implementar a lógica para gerar um token de recuperação de senha
+
+        const token = jwt.sign({ id: usuario.usuario_id }, process.env.JWT_SECRET, {
+            expiresIn: '1h' // 1 hora
+        });
+
+        sql.query('DELETE FROM tokens_recuperacao WHERE usuario_id = ?', [usuario.usuario_id], (err, resultado) => {
+            if (err) {
+                callback(err, null);
+                return;
+            }
+        });
+
+        // Continuação da lógica para salvar o token no banco de dados
+
+        sql.query('INSERT INTO tokens_recuperacao (usuario_id, token, expirationDate) VALUES (?, ?, ?)',
+
+           //1 day date
+            [usuario.usuario_id, token, new Date(new Date().getTime() + 60 * 60 * 1000)], (err, resultado) => {
+                if (err) {
+                    callback(err, null);
+                    return;
+                }
+
+                console.log(usuario)
+
+                // Continuação da lógica para enviar o e-mail com o token
+
+                sendEmails(usuario.usuario_nome, usuario.usuario_email, token, 'http://localhost:21021')
+
+
+
+                callback(null, token);
+            });
+    });
+};
+
+function sendEmails(nomeUsuario, emailUsuario, token, urlBase) {
+    return new Promise(async (resolve, reject) => {
+        const dadosRecuperacao = {
+            nomeUsuario,
+            tokenRecuperacao: token,
+            urlBase
+        };
+
+        const html = recuperacao_senha_email.generateRecoveryEmail(dadosRecuperacao);
+
+        let transporter = nodemailer.createTransport({
+            host: 'smtp-vip.kinghost.net.',
+            auth: {
+                user: 'naoresponda@kanzparty.com.br',
+                pass: 'W83qp5eQ40@'
+            }
+        });
+
+        let mailOptions = {
+            from: 'naoresponda@kanzparty.com.br',
+            to: emailUsuario,
+            subject: 'Recuperação de Senha',
+            html: html
+        };
+
+        transporter.sendMail(mailOptions, function (error, info) {
+            if (error) {
+                console.log(error);
+                reject(error);
+            } else {
+                console.log('Email enviado: ' + info.response);
+                resolve(info.response);
+            }
+        });
+    });
+}
+
+
+
 
 Usuario.getAll = (nome, result) => {
     let query = "SELECT * FROM usuarios";

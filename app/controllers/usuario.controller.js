@@ -223,3 +223,37 @@ exports.findOneById = (req, res) => {
     });
   });
 };
+
+
+exports.redefinirSenha = (req, res) => {
+  const { token, novaSenha } = req.body;
+
+
+  Usuario.redefinirSenha(token, novaSenha, (err, data) => {
+
+    if (err) {
+      if (err === "Token inválido ou expirado") {
+        return res.status(400).send({ message: err });
+      } else {
+        return res.status(500).send({ message: "Erro ao redefinir a senha" });
+      }
+    }
+    res.send({ message: "Senha redefinida com sucesso." });
+  });
+};
+
+
+exports.redefinirSenhaToken = (req, res) => {
+  const { email } = req.body;
+
+  Usuario.redefinirSenhaToken(email, (err, data) => {
+    if (err) {
+      if (err === "Email não encontrado") {
+        return res.status(400).send({ message: err });
+      } else {
+        return res.status(500).send({ message: "Erro ao redefinir a senha" });
+      }
+    }
+    res.send({ message: "Token enviado com sucesso." });
+  });
+}
