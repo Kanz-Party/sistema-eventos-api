@@ -86,7 +86,7 @@ Carrinho.getMeusIngressos = (req, result) => {
             return;
         }
         if (res.length) {
-            console.log(res);
+   
             const carrinhos_id = res.map(carrinho => carrinho.carrinho_id);
             console.log(carrinhos_id);
             sql.query(`SELECT
@@ -105,8 +105,8 @@ Carrinho.getMeusIngressos = (req, result) => {
                 JOIN lotes l ON l.lote_id = cl.lote_id
                 JOIN ingressos i ON i.ingresso_id = l.ingresso_id
                 JOIN pagamentos p ON p.carrinho_id = c.carrinho_id
-                LEFT JOIN qrcodes qr ON qr.carrinho_id = c.carrinho_id
-            WHERE c.carrinho_id IN (?) AND ((p.pagamento_expiracao > NOW() AND p.pagamento_status = 0) OR p.pagamento_status = 1 )
+                JOIN qrcodes qr ON qr.carrinho_id = c.carrinho_id
+            WHERE c.carrinho_id IN (?) AND ((p.pagamento_expiracao > NOW() AND p.pagamento_status = 0) OR p.pagamento_status = 1 ) GROUP BY p.pagamento_id,i.ingresso_id
             
               `, [carrinhos_id], (err, res) => {
                 if (err) {
