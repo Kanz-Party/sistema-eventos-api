@@ -162,17 +162,17 @@ MercadoPago.createPayment = async (body, result) => {
                     zip_code: usuario.usuario_cep
                 }
             },
-            // payment_methods: {
-            //     excluded_payment_methods: [
-            //         { id: "bolbradesco" },
-            //         { id: "pec" }
-            //     ],
-            //     excluded_payment_types: [
-            //         { id: "credit_card" },
-            //         { id: "debit_card" }
-            //     ],
-            //     installments: 1
-            // },
+            payment_methods: {
+                excluded_payment_methods: [
+                    { id: "bolbradesco" },
+                    { id: "pec" }
+                ],
+                excluded_payment_types: [
+                    { id: "credit_card" },
+                    { id: "debit_card" }
+                ],
+                installments: 1
+            },
             notification_url: `${notificationUrl}/${body.carrinho_id}/${usuario.usuario_id}?source_news=webhooks`,
             statement_descriptor: 'Kanz Party',
             expires: true,
