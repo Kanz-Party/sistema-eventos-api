@@ -7,7 +7,7 @@ const QrCode = require("./qrcode.model.js");
 const { verificarSessao } = require("../middlewares/Auth.js");
 
 
-const accessToken = 'APP_USR-7617401898799737-013119-e2dece07bf195ced26078839c4f55746-1661485047';
+const accessToken = 'APP_USR-4998860730644430-011016-9ef57c284e2b4873242bd5794e46f4bd-511688906';
 const client = new MercadoPagoConfig({ accessToken });
 const notificationUrl = 'https://kanzparty.com.br/api/mercadoPago/receive'
 const statusPagamento = {
@@ -270,7 +270,7 @@ const cancelarPagamentosPendentesDoUsuario = (preferences_ids) => {
     });
 };
 
-MercadoPago.removerPagamentosPendentesDoUsuario = (usuario_id) => {
+MercadoPago.removerPagamentosPendentesDoUsuario = (usuario_id, dateToExpire) => {
     return new Promise((resolve, reject) => {
         sql.query("SELECT pagamento_preference_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0", [usuario_id], async (err, res) => {
             if (err) {
@@ -288,14 +288,13 @@ MercadoPago.removerPagamentosPendentesDoUsuario = (usuario_id) => {
                                 id: pagamento.pagamento_preference_id,
                                 updatePreferenceRequest: {
                                     expires: true,
-                                    expiration_date_from: moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-                                    expiration_date_to: moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ')
+                                    expiration_date_from: dateToExpire.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+                                    expiration_date_to: dateToExpire.format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
                                 }
                             })
                         }
                     } catch (error) {
-                        console.log("error: ", error);
-                        reject(error);
+                        console.log("error aqui: ", error);
                     }
                     preferences_ids.push(pagamento.pagamento_preference_id);
                 }

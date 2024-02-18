@@ -130,10 +130,9 @@ Carrinho.getMeusIngressos = (req, result) => {
     });
 };
 
-const expirarCarrinhosJaPendentesDoUsuario = (usuario_id) => {
+const expirarCarrinhosJaPendentesDoUsuario = (usuario_id, dateToExpire) => {
     return new Promise((resolve, reject) => {
-        const dataExpiracao = moment().format('YYYY-MM-DD HH:mm:ss');
-        sql.query("UPDATE carrinhos SET carrinho_expiracao = ? WHERE carrinho_id IN (SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0)", [dataExpiracao, usuario_id], (err, res) => {
+        sql.query("UPDATE carrinhos SET carrinho_expiracao = ? WHERE carrinho_id IN (SELECT carrinho_id FROM pagamentos WHERE usuario_id = ? AND pagamento_status = 0)", [dateToExpire.format('YYYY-MM-DD HH:mm:ss'), usuario_id], (err, res) => {
             if (err) return reject(err);
             resolve(res);
         });
@@ -180,8 +179,9 @@ Carrinho.create = async (newCarrinho, result) => {
 
         console.log('Expirando carrinhos já pendentes do usuário...', usuario_id)
         try {   
-            await expirarCarrinhosJaPendentesDoUsuario(usuario_id);
-            await MercadoPago.removerPagamentosPendentesDoUsuario(usuario_id);
+            const dateToExpire = moment();
+            await expirarCarrinhosJaPendentesDoUsuario(usuario_id, dateToExpire);
+            await MercadoPago.removerPagamentosPendentesDoUsuario(usuario_id, dateToExpire);
         } catch (error) {
             console.error('Erro ao expirar carrinhos pendentes do usuário:', error);
             result({
