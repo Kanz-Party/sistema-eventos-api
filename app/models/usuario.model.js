@@ -123,7 +123,7 @@ Usuario.createWithLogin = (newUsuario, result) => {
 
 
 Usuario.update = (id, usuarioData, result) => {
-    console.log('dataaaaaa', usuarioData);
+
     // Primeiro, verifica se o e-mail já existe e pertence a outro usuário
     sql.query("SELECT * FROM usuarios WHERE usuario_email = ? AND usuario_id != ?", [usuarioData.usuario_email, id], (err, res) => {
         if (err) {
@@ -152,46 +152,35 @@ Usuario.update = (id, usuarioData, result) => {
                 return;
             }
 
-            // Verifica se uma nova senha foi fornecida
-            if (usuarioData.senha) {
-                bcrypt.hash(usuarioData.senha, saltRounds, (err, hash) => {
-                    if (err) {
-                        console.log("error: ", err);
-                        result(err, null);
-                        return;
-                    }
 
-                    // Atualiza a senha com a versão criptografada
-                    usuarioData.senha = hash;
-
-                    // Agora, atualiza o usuário no banco de dados
-                    sql.query("UPDATE usuarios SET ? WHERE usuario_id = ?", [usuarioData, id], (err, res) => {
-                        if (err) {
-                            console.log("error: ", err);
-                            result(err, null);
-                            return;
-                        }
-
-                        console.log("updated usuario: ", { id: id, ...usuarioData });
-                        result(null, { id: id, ...usuarioData });
-                    });
-                });
-            } else {
-                // Se nenhuma senha for fornecida, remove a propriedade senha do objeto usuarioData
-                const { senha, ...usuarioDataSemSenha } = usuarioData;
-
-                // Atualiza os outros dados do usuário
-                sql.query("UPDATE usuarios SET ? WHERE usuario_id = ?", [usuarioDataSemSenha, id], (err, res) => {
-                    if (err) {
-                        console.log("error: ", err);
-                        result(err, null);
-                        return;
-                    }
-
-                    console.log("updated usuario: ", { id: id, ...usuarioDataSemSenha });
-                    result(null, { id: id, ...usuarioDataSemSenha });
-                });
+            if (!usuarioData.usuario_senha) {
+                delete usuarioData.usuario_senha;
             }
+
+            sql.query(
+                "UPDATE usuarios SET ? WHERE usuario_id = ?",
+                [usuarioData, id],
+                (err, res) => {
+                    if (err) {
+                        console.log("error: ", err);
+                        result(err, null);
+                        return;
+                    }
+
+                    if (res.affectedRows == 0) {
+                        // not found Usuario with the id
+                        result({ kind: "not_found" }, null);
+                        return;
+                    }
+
+                    console.log("updated usuario: ", { id: id, ...usuarioData });
+                    result(null, { id: id, ...usuarioData });
+                }
+            );
+
+
+
+
         });
     });
 };
@@ -232,8 +221,8 @@ Usuario.redefinirSenha = (token, novaSenha, callback) => {
         const tokenData = resultado[0];
 
         console.log('tokenData', tokenData)
-     
-        
+
+
         if (tokenData.expirationDate < new Date() || tokenData.isUsed) {
             callback('Token inválido ou expirado', null);
             return;
@@ -300,7 +289,7 @@ Usuario.redefinirSenhaToken = (email, callback) => {
 
         sql.query('INSERT INTO tokens_recuperacao (usuario_id, token, expirationDate) VALUES (?, ?, ?)',
 
-           //1 day date
+            //1 day date
             [usuario.usuario_id, token, new Date(new Date().getTime() + 60 * 60 * 1000)], (err, resultado) => {
                 if (err) {
                     callback(err, null);
