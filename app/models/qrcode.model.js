@@ -2,6 +2,7 @@ const sql = require("./db.js");
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const Pdf = require("./pdf.model.js");
+const Mailer = require("./mailer.model.js");
 const ingressos_email = require("../assets/emails/ingressos.js");
 
 // Constructor
@@ -52,46 +53,6 @@ function insertQrCode(qrcode) {
                 return;
             }
             resolve({ qrcode_id: res.insertId, ...qrcode });
-        });
-    });
-}
-
-function sendEmails(qrcodes) {
-    return new Promise(async (resolve, reject) => {
-        await Pdf.generate(qrcodes);
-
-        const carrinho_id = qrcodes[0].carrinho_id;
-        const usuario_nome = qrcodes[0].usuario_nome;
-        const usuario_email = qrcodes[0].usuario_email;
-
-        let transporter = nodemailer.createTransport({
-            host: 'smtp-vip.kinghost.net.',
-            auth: {
-                user: 'naoresponda@kanzparty.com.br',
-                pass: 'W83qp5eQ40@'
-            }
-        });
-
-        let mailOptions = {
-            from: 'naoresponda@kanzparty.com.br',
-            to: usuario_email,
-            subject: `Olá, ${usuario_nome}! Seus ingressos estão prontos!`,
-            html: ingressos_email.generate(qrcodes),
-            attachments: qrcodes.map(qrCode => ({
-                filename: `${qrCode.qrcode_hash}.pdf`,
-                path: `app/assets/ingressos/${carrinho_id}/${qrCode.qrcode_hash}.pdf`,
-                contentType: 'application/pdf'
-            }))
-        };
-
-        transporter.sendMail(mailOptions, function(error, info){
-            if (error) {
-                console.log(error);
-                reject(error);
-            } else {
-                console.log('Email sent: ' + info.response);
-                resolve(info.response);
-            }
         });
     });
 }
@@ -147,7 +108,7 @@ QrCode.create = async (body, result) => {
     }
 
     try {
-        await sendEmails(qrCodes);
+        await Mailer.enviarIngressos(qrCodes);
     } catch (error) {
         result(error, null);
         return;
