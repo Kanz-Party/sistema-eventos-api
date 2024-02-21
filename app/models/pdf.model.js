@@ -14,12 +14,12 @@ Pdf.generate = async (ingressos) => {
             }
 
             const doc = new PDFDocument();
-            const filePath = `${dir}${ingresso.qrcode_id}.pdf`;
+            const filePath = `${dir}${ingresso.qrcode_hash}.pdf`;
 
             const writeStream = fs.createWriteStream(filePath);
             doc.pipe(writeStream);
 
-            QRCode.toDataURL(ingresso.qrcode_id.toString(), async function (err, url) {
+            QRCode.toDataURL(ingresso.qrcode_hash.toString(), async function (err, url) {
                 if (err) {
                     console.log(err);
                     reject(err);
@@ -38,7 +38,7 @@ Pdf.generate = async (ingressos) => {
                 .moveDown(4);
 
                 doc.fontSize(20)
-                    .text(`Ingresso #${ingresso.qrcode_id.toString()}`, { align: 'center' })
+                    .text(`Ingresso #${ingresso.qrcode_hash.toString()}`, { align: 'center' })
                     
                 const qrCodeSize = 300; // The size of the QR code
                 const qrCodePosX = (pdfWidth - qrCodeSize) / 2; // Calculate the x position of the QR code

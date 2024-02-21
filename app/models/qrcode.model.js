@@ -78,8 +78,8 @@ function sendEmails(qrcodes) {
             subject: `Olá, ${usuario_nome}! Seus ingressos estão prontos!`,
             html: ingressos_email.generate(qrcodes),
             attachments: qrcodes.map(qrCode => ({
-                filename: `${qrCode.qrcode_id}.pdf`,
-                path: `app/assets/ingressos/${carrinho_id}/${qrCode.qrcode_id}.pdf`,
+                filename: `${qrCode.qrcode_hash}.pdf`,
+                path: `app/assets/ingressos/${carrinho_id}/${qrCode.qrcode_hash}.pdf`,
                 contentType: 'application/pdf'
             }))
         };
@@ -96,6 +96,18 @@ function sendEmails(qrcodes) {
     });
 }
 
+function generateRandomDigits(length) {
+    let result = '';
+    while (result.length < length) {
+        // Generate a random integer in the range [0, 9999] to ensure we get chunks of up to 4 digits
+        const randomInt = crypto.randomInt(0, 10000);
+        // Pad the random integer to ensure it has 4 digits, then concatenate
+        result += randomInt.toString().padStart(4, '0');
+    }
+    // Trim the result to the exact length needed, in case the last addition exceeds the desired length
+    return result.substring(0, length);
+}
+
 QrCode.create = async (body, result) => {
     let ingressos = [];
     try {
@@ -109,6 +121,7 @@ QrCode.create = async (body, result) => {
     for(const ingresso of ingressos) {
         for(let i = 0; i < Number.parseInt(ingresso.lote_quantidade); i++) {
             const qrCode = {
+                qrcode_hash: generateRandomDigits(16),
                 carrinho_id: ingresso.carrinho_id,
                 usuario_id: ingresso.usuario_id,
                 lote_id: ingresso.lote_id,
