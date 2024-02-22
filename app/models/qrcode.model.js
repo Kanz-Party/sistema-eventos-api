@@ -44,6 +44,24 @@ function getIngressos(carrinho_id) {
     });
 }
 
+function getQrCodeByHash(qrcode_hash) {
+    return new Promise((resolve, reject) => {
+        sql.query("SELECT * FROM qrcodes WHERE qrcode_hash = ?", qrcode_hash, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            if (res.length) {
+                resolve(res[0]);
+                return;
+            }
+            resolve([]);
+        });
+    });
+
+}
+
 function insertQrCode(qrcode) {
     return new Promise((resolve, reject) => {
         sql.query("INSERT INTO qrcodes SET ?", qrcode, (err, res) => {
@@ -57,16 +75,32 @@ function insertQrCode(qrcode) {
     });
 }
 
+// Polyfill for crypto.randomInt (synchronous version)
+function randomIntSync(min, max) {
+    const buf = crypto.randomBytes(4);
+    const num = buf.readUInt32BE(0) % (max - min) + min;
+    return num;
+}
+
 function generateRandomDigits(length) {
     let result = '';
     while (result.length < length) {
         // Generate a random integer in the range [0, 9999] to ensure we get chunks of up to 4 digits
-        const randomInt = crypto.randomInt(0, 10000);
+        // Using the polyfill function for compatibility
+        const randomInt = randomIntSync(0, 10000);
         // Pad the random integer to ensure it has 4 digits, then concatenate
         result += randomInt.toString().padStart(4, '0');
     }
     // Trim the result to the exact length needed, in case the last addition exceeds the desired length
     return result.substring(0, length);
+}
+
+async function generateQrCodeHash(){
+    let hash = generateRandomDigits(16);
+    while(await getQrCodeByHash(hash).length > 0) {
+        hash = generateRandomDigits(16);
+    }
+    return hash;
 }
 
 QrCode.create = async (body, result) => {
@@ -77,12 +111,16 @@ QrCode.create = async (body, result) => {
         result(error, null);
         return;
     }
+    const carrinho_id = ingressos[0].carrinho_id;
+    const usuario_nome = ingressos[0].usuario_nome;
+    const usuario_email = ingressos[0].usuario_email;
+
     let qrCodes = [];
 
     for(const ingresso of ingressos) {
         for(let i = 0; i < Number.parseInt(ingresso.lote_quantidade); i++) {
             const qrCode = {
-                qrcode_hash: generateRandomDigits(16),
+                qrcode_hash: await generateQrCodeHash(),
                 carrinho_id: ingresso.carrinho_id,
                 usuario_id: ingresso.usuario_id,
                 lote_id: ingresso.lote_id,
@@ -108,7 +146,7 @@ QrCode.create = async (body, result) => {
     }
 
     try {
-        await Mailer.enviarIngressos(qrCodes);
+        await Mailer.enviarIngressos(qrCodes, carrinho_id, usuario_nome, usuario_email);
     } catch (error) {
         result(error, null);
         return;
