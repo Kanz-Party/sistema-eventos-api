@@ -10,6 +10,81 @@ const QrCode = function(qrcode) {
 
 };
 
+function inativarQrcode(qrcode_hash) {
+    return new Promise((resolve, reject) => {
+        sql.query("UPDATE qrcodes SET qrcode_ativo = 0, qrcode_data_entrada = NOW() WHERE qrcode_hash = ?", qrcode_hash, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            resolve(res.affectedRows);
+        });
+    });
+}
+
+QrCode.entrada = (qrcode_hash, result) => {
+    inativarQrcode(qrcode_hash).then(affectedRows => {
+        if(affectedRows < 1) {
+            result({ error: "QRCODE_NAO_ENCONTRADO", message: "QrCode não encontrado."}, null);
+            return;
+        }
+        result(null, true);
+    }).catch(err => {
+        result(err, null);
+    });
+};
+
+function getQrCodeCompleto(qrcode_hash) {
+    return new Promise((resolve, reject) => {
+        sql.query(`SELECT
+            q.qrcode_id ,
+            q.qrcode_hash, 
+            q.qrcode_ativo,
+            u.usuario_nome,
+            u.usuario_email,
+            i.ingresso_descricao,
+            l.lote_descricao,
+            FORMAT(ROUND(l.lote_preco / 100, 2), 2) as lote_preco
+            FROM qrcodes q
+            LEFT JOIN usuarios u ON q.usuario_id = u.usuario_id
+            LEFT JOIN lotes l ON q.lote_id = l.lote_id
+            LEFT JOIN ingressos i ON l.ingresso_id = i.ingresso_id
+            WHERE q.qrcode_hash = ?`, qrcode_hash, (err, res) => {
+            if (err) {
+                console.log("error: ", err);
+                reject(err);
+                return;
+            }
+            if (res.length) {
+                resolve(res);
+                return;
+            }
+            reject({ error: "not_found", message: "QrCode não encontrado."});
+        });
+    });
+
+}
+
+QrCode.findByHash = (qrcode_hash, result) => {
+    getQrCodeCompleto(qrcode_hash)
+        .then(qrcode => {
+            if(qrcode.length < 1) {
+                result({ error: "QRCODE_NAO_ENCONTRADO", message: "QrCode não encontrado."}, null);
+                return;
+            }
+            if(qrcode[0].qrcode_ativo === 0) {
+                result({ error: "QRCODE_INATIVO", message: "QrCode inativo."}, null);
+                return;
+            }
+            result(null, qrcode);
+        })
+        .catch(err => {
+            result(err, null);
+        });
+};
+
+
 function getIngressos(carrinho_id) {
     return new Promise((resolve, reject) => {
         sql.query(`SELECT

@@ -8,7 +8,7 @@ const { verificarSessao } = require("../middlewares/Auth.js");
 
 
 const accessToken = 'APP_USR-7617401898799737-013119-e2dece07bf195ced26078839c4f55746-1661485047'; //teste
-// const accessToken = 'APP_USR-4998860730644430-011016-9ef57c284e2b4873242bd5794e46f4bd-511688906'; //produção
+// const accessToken = 'APP_USR-4998860730644430-011016-9ef57c284e2b487 3242bd5794e46f4bd-511688906'; //produção
 
 const client = new MercadoPagoConfig({ accessToken });
 const notificationUrl = 'https://kanzparty.com.br/api/mercadoPago/receive'
@@ -290,8 +290,8 @@ MercadoPago.removerPagamentosPendentesDoUsuario = (usuario_id, dateToExpire) => 
                                 id: pagamento.pagamento_preference_id,
                                 updatePreferenceRequest: {
                                     expires: true,
-                                    expiration_date_from: dateToExpire.format('YYYY-MM-DDTHH:mm:ss.SSSZ') || moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-                                    expiration_date_to: dateToExpire.add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ') || moment().add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+                                    expiration_date_from: dateToExpire.format('YYYY-MM-DDTHH:mm:ss.SSSZ') ?? moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+                                    expiration_date_to: dateToExpire.add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ') ?? moment().add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
                                 }
                             })
                         }

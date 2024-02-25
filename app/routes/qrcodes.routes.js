@@ -5,5 +5,9 @@ module.exports = app => {
 
     router.post("/", qrcodes.create);
 
+    router.get("/:auth/:qrcode", qrcodes.findByHash);
+
+    router.post("/entrada/:auth/:qrcode", qrcodes.entrada);
+
     app.use('/qrcodes', router);
 };
