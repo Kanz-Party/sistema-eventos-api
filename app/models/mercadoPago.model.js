@@ -290,8 +290,8 @@ MercadoPago.removerPagamentosPendentesDoUsuario = (usuario_id, dateToExpire) => 
                                 id: pagamento.pagamento_preference_id,
                                 updatePreferenceRequest: {
                                     expires: true,
-                                    expiration_date_from: dateToExpire.format('YYYY-MM-DDTHH:mm:ss.SSSZ') ?? moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-                                    expiration_date_to: dateToExpire.add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ') ?? moment().add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+                                    expiration_date_from: dateToExpire ? dateToExpire.format('YYYY-MM-DDTHH:mm:ss.SSSZ') : moment().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+                                    expiration_date_to: dateToExpire ? dateToExpire.add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ') : moment().add(1, 'second').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
                                 }
                             })
                         }
