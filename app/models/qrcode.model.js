@@ -10,9 +10,9 @@ const QrCode = function(qrcode) {
 
 };
 
-function inativarQrcode(qrcode_hash) {
+function inativarQrcode(qrcode_id) {
     return new Promise((resolve, reject) => {
-        sql.query("UPDATE qrcodes SET qrcode_ativo = 0, qrcode_data_entrada = NOW() WHERE qrcode_hash = ?", qrcode_hash, (err, res) => {
+        sql.query("UPDATE qrcodes SET qrcode_ativo = 0, qrcode_data_entrada = NOW() WHERE qrcode_id = ?", qrcode_id, (err, res) => {
             if (err) {
                 console.log("error: ", err);
                 reject(err);
@@ -23,8 +23,8 @@ function inativarQrcode(qrcode_hash) {
     });
 }
 
-QrCode.entrada = (qrcode_hash, result) => {
-    inativarQrcode(qrcode_hash).then(affectedRows => {
+QrCode.entrada = (qrcode_id, result) => {
+    inativarQrcode(qrcode_id).then(affectedRows => {
         if(affectedRows < 1) {
             result({ error: "QRCODE_NAO_ENCONTRADO", message: "QrCode não encontrado."}, null);
             return;
@@ -77,7 +77,7 @@ QrCode.findByHash = (qrcode_hash, result) => {
                 result({ error: "QRCODE_INATIVO", message: "QrCode inativo."}, null);
                 return;
             }
-            result(null, qrcode);
+            result(null, qrcode[0]);
         })
         .catch(err => {
             result(err, null);
