@@ -169,10 +169,6 @@ MercadoPago.createPayment = async (body, result) => {
                     { id: "bolbradesco" },
                     { id: "pec" }
                 ],
-                excluded_payment_types: [
-                    { id: "credit_card" },
-                    { id: "debit_card" }
-                ],
                 installments: 1
             },
             notification_url: `${notificationUrl}/${body.carrinho_id}/${usuario.usuario_id}?source_news=webhooks`,
