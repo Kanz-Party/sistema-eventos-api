@@ -73,60 +73,51 @@ const getCarrinhoLotes = (carrinho_id) => {
     });
 };
 
-Carrinho.getMeusIngressos = (req, result) => {
+Carrinho.getMeusCarrinhos = (req, result) => {
     const usuario_id = req.usuario_id;
 
-    sql.query(`SELECT carrinho_id FROM pagamentos WHERE usuario_id = ?`, [usuario_id], (err, res) => {
+    sql.query(`SELECT c.carrinho_id,
+            FORMAT(ROUND(SUM(cl.lote_preco * cl.lote_quantidade) / 100, 2), 2) as carrinho_total,
+            SUM(cl.lote_quantidade)                                            as carrinho_itens,
+            DATE_SUB(c.carrinho_expiracao, INTERVAL 15 MINUTE)                 as carrinho_data_criacao
+        from carrinhos c
+            LEFT JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
+            LEFT JOIN lotes l ON l.lote_id = cl.lote_id
+            LEFT JOIN pagamentos p on c.carrinho_id = p.carrinho_id
+            LEFT JOIN usuarios u on p.usuario_id = u.usuario_id
+        WHERE u.usuario_id = ?
+        AND p.pagamento_id IS NOT NULL
+        AND ((p.pagamento_expiracao > NOW() AND p.pagamento_status = 0) OR p.pagamento_status = 1)
+        GROUP BY cl.carrinho_id`
+    , [usuario_id], (err, res) => {
         if (err) {
-            console.log("error: ", err);
-            result({
-                err: 'ERRO_INTERNO',
-                message: err
-            });
+            result(err, null);
             return;
         }
-        if (res.length) {
-   
-            const carrinhos_id = res.map(carrinho => carrinho.carrinho_id);
-            console.log(carrinhos_id);
-            sql.query(`SELECT
-                c.carrinho_id,
-                i.ingresso_id,
-                i.ingresso_descricao,
-                l.lote_id,
-                l.lote_descricao,
-                cl.lote_quantidade,
-                FORMAT(ROUND(cl.lote_preco / 100, 2), 2) AS lote_preco,
-                p.*,
-                qr.qrcode_id
-            FROM
-                carrinhos c
-                JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
-                JOIN lotes l ON l.lote_id = cl.lote_id
-                JOIN ingressos i ON i.ingresso_id = l.ingresso_id
-                JOIN pagamentos p ON p.carrinho_id = c.carrinho_id
-                JOIN qrcodes qr ON qr.carrinho_id = c.carrinho_id
-            WHERE c.carrinho_id IN (?) AND ((p.pagamento_expiracao > NOW() AND p.pagamento_status = 0) OR p.pagamento_status = 1 ) GROUP BY p.pagamento_id,i.ingresso_id
-            
-              `, [carrinhos_id], (err, res) => {
-                if (err) {
-                    console.log("error: ", err);
-                    result({
-                        err: 'ERRO_INTERNO',
-                        message: err
-                    });
-                    return;
-                }
-                if (res.length) {
-                    result(null, res);
-                } else {
-                    result(null, []);
-                }
-            }
-            );
-        } else {
-            result(null, []);
+        if(res.length) {
+            result(null, res);
         }
+        result(null, []);
+    });
+};
+
+Carrinho.getMeusQrcodes = (req, result) => {
+    const carrinho_id = req.carrinho_id;
+
+    sql.query(`SELECT q.qrcode_hash, l.lote_descricao, i.ingresso_descricao, q.qrcode_ativo, q.qrcode_data_entrada
+        FROM qrcodes q
+            LEFT JOIN lotes l ON q.lote_id = l.lote_id
+            LEFT JOIN ingressos i ON l.ingresso_id = i.ingresso_id
+        where q.carrinho_id = ?`
+    , [carrinho_id], (err, res) => {
+        if (err) {
+            result(err, null);
+            return;
+        }
+        if(res.length) {
+            result(null, res);
+        }
+        result(null, []);
     });
 };
 

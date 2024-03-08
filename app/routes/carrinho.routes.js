@@ -8,8 +8,9 @@ module.exports = app => {
 
     router.get("/carrinho/:carrinho_hash", carrinho.findByHash);
 
-    router.get("/ingressos/meus-ingressos", carrinho.getMeusIngressos);
+    router.get("/carrinhos/meus-carrinhos", carrinho.getMeusCarrinhos);
     
+    router.get("/carrinho/meus-qrcodes/:carrinho_id", carrinho.getMeusQrcodes)
   
     app.use('/carrinhos', router);
   };
