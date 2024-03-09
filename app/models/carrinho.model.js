@@ -79,7 +79,8 @@ Carrinho.getMeusCarrinhos = (req, result) => {
     sql.query(`SELECT c.carrinho_id,
             FORMAT(ROUND(SUM(cl.lote_preco * cl.lote_quantidade) / 100, 2), 2) as carrinho_total,
             SUM(cl.lote_quantidade)                                            as carrinho_itens,
-            DATE_SUB(c.carrinho_expiracao, INTERVAL 15 MINUTE)                 as carrinho_data_criacao
+            DATE_SUB(c.carrinho_expiracao, INTERVAL 15 MINUTE)                 as carrinho_data_criacao,
+            p.pagamento_status
         from carrinhos c
             LEFT JOIN carrinhos_lotes cl ON c.carrinho_id = cl.carrinho_id
             LEFT JOIN lotes l ON l.lote_id = cl.lote_id
@@ -88,6 +89,7 @@ Carrinho.getMeusCarrinhos = (req, result) => {
         WHERE u.usuario_id = ?
         AND p.pagamento_id IS NOT NULL
         AND ((p.pagamento_expiracao > NOW() AND p.pagamento_status = 0) OR p.pagamento_status = 1)
+        AND p.pagamento_status = 1
         GROUP BY cl.carrinho_id`
     , [usuario_id], (err, res) => {
         if (err) {
@@ -95,7 +97,7 @@ Carrinho.getMeusCarrinhos = (req, result) => {
             return;
         }
         if(res.length) {
-            result(null, res);
+            return result(null, res);
         }
         result(null, []);
     });
@@ -115,7 +117,7 @@ Carrinho.getMeusQrcodes = (req, result) => {
             return;
         }
         if(res.length) {
-            result(null, res);
+            return result(null, res);
         }
         result(null, []);
     });

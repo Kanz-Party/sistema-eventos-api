@@ -77,7 +77,7 @@ exports.getMeusCarrinhos = (req, res) => {
         req.usuario_id = usuario_id;
 
         // Now call Carrinho.getMeusIngressos with the modified request
-        Carrinho.getMeusIngressos(req, (err, data) => {
+        Carrinho.getMeusCarrinhos(req, (err, data) => {
 
             if (err) {
                 return res.status(500).send({

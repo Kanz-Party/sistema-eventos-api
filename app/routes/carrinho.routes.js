@@ -10,7 +10,7 @@ module.exports = app => {
 
     router.get("/carrinhos/meus-carrinhos", carrinho.getMeusCarrinhos);
     
-    router.get("/carrinho/meus-qrcodes/:carrinho_id", carrinho.getMeusQrcodes)
+    router.get("/carrinho/meus-qrcodes/:carrinho_id", carrinho.getMeusQrcodes);
   
     app.use('/carrinhos', router);
   };
